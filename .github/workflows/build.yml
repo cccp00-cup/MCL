@@ -45,10 +45,13 @@ jobs:
       - name: 编译
         run: cmake --build build --config Release
 
-      - name: 冒烟 —— 离屏跑一帧
+      - name: 冒烟 —— 跑一帧
         shell: pwsh
         run: |
-          $env:QT_QPA_PLATFORM = "offscreen"
+          # 这里**刻意不用 offscreen**：Qt 的 offscreen 插件在 Windows 上拿不到
+          # 系统字体数据库，界面文字会全渲染成豆腐块（CI 第二版截图就是满屏方块）。
+          # Linux 的 offscreen 走 fontconfig 所以没这问题。
+          # runner 有真实的桌面会话，直接用默认平台开窗口即可。
 
           # 必须用 Start-Process -Wait，不能用 `& mcl.exe`。
           # mcl.exe 是 WIN32_EXECUTABLE（GUI 子系统），PowerShell 调 GUI 程序时
@@ -62,6 +65,17 @@ jobs:
             throw "没出图 —— QML 八成没加载起来"
           }
           Write-Host "截图 $((Get-Item smoke.png).Length) 字节"
+
+      - name: 看看系统有哪些字体
+        if: always()
+        shell: pwsh
+        run: |
+          # 万一还有豆腐块，至少知道是"缺字体"还是"字体引擎没起来"
+          $fonts = Get-ChildItem C:\Windows\Fonts -ErrorAction SilentlyContinue |
+                   Select-Object -ExpandProperty Name
+          Write-Host "字体总数: $($fonts.Count)"
+          $cjk = $fonts | Where-Object { $_ -match 'msyh|simsun|simhei|simkai|Deng|Noto' }
+          Write-Host "疑似中文字体: $(if ($cjk) { $cjk -join ', ' } else { '（一个都没有）' })"
 
       - name: 看看 mcl.log
         if: always()
