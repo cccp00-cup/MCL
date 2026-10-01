@@ -392,6 +392,19 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 > 教训：Qt 的默认值不一定适配国内的网络环境。"连接卡住不报错"这类症状，
 > 先怀疑协议协商，而不是网络慢。
 
+**Modrinth 的内容量随版本急剧衰减**（这不是 bug，是上游的限制，但用户会以为是筛选坏了）：
+
+| MC 版本 | 模组数 |
+| --- | --- |
+| 1.20.1 | 约 34,500 |
+| 1.16.5 | 约 5,800 |
+| 1.12.2 | 约 2,800 |
+| 1.7.10 | 约 970 |
+
+大量老模组只发布在 **CurseForge**。1.12.2 下 JEI、JourneyMap 这些主流模组是搜得到的，
+少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
+（要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
+
 **`Component.onCompleted` 的时机陷阱（详情页永远是空的）**：
 
 详情页最初在 `Component.onCompleted` 里发请求拉版本列表。但 QML 里

@@ -379,6 +379,41 @@ Item {
         }
     }
 
+    // ——————————————————— 搜不到东西时的说明
+    //
+    // 原来这里是纯空白。用户看到的只是"什么都没有"，很容易以为是筛选坏了 ——
+    // 实际上老版本的模组在 Modrinth 上本来就少（1.12.2 约 2800 个 vs 1.20.1 约 34500 个），
+    // 大量老模组只发布在 CurseForge。说清楚比闷着强。
+    Column {
+        anchors.centerIn: list
+        spacing: 6
+        visible: view.client && !view.client.loading && view.client.results.length === 0
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("没有找到内容")
+            font.pixelSize: 13
+            color: Theme.textSecondary
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: view.versionFilter !== "" || view.loaderFilter !== ""
+            text: qsTr("换换关键词，或者放宽版本 / 加载器筛选")
+            font.pixelSize: 11
+            color: Theme.textTertiary
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 380
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            visible: view.versionFilter !== ""
+            text: qsTr("Modrinth 上老版本的内容本来就少 —— 1.12.2 的模组只有 1.20.1 的十二分之一左右，很多老模组只发布在 CurseForge")
+            font.pixelSize: 10
+            color: Theme.textTertiary
+        }
+    }
+
     // ——————————————————— 安装进度（内核在干活时才有）
     Rectangle {
         id: statusBar
