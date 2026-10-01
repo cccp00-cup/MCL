@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 0.3.1
+    VERSION 0.4.0
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -124,6 +124,7 @@ set(MCL_QML_FILES
     AppSettings
     AppAbout
     AppNewInstance
+    MarketDetail
 )
 
 foreach(_qml IN LISTS MCL_QML_FILES)

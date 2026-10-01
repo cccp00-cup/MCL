@@ -862,8 +862,57 @@ QString VanillaKernel::folderForKind(const QString &kind)
     return QStringLiteral("mods");
 }
 
+// 在项目的版本列表里挑一个能用的。
+//
+// 以前这里是 `versions.first()` —— Modrinth 返回的顺序并不保证按"跟你的实例
+// 对得上"排，所以经常装到不兼容的版本。现在同时要求 MC 版本和加载器都匹配，
+// 再在里面挑发布日期最新的。挑不出来就返回空，由调用方报错，绝不硬装。
+QJsonObject VanillaKernel::pickContentVersion(const QJsonArray &versions,
+                                              const QString &gameVersion,
+                                              const QString &loader)
+{
+    QJsonObject best;
+    QString bestDate;
+
+    for (const QJsonValue &value : versions) {
+        const QJsonObject object = value.toObject();
+
+        if (!gameVersion.isEmpty()) {
+            bool matched = false;
+            for (const QJsonValue &g : object.value(QStringLiteral("game_versions")).toArray()) {
+                if (g.toString() == gameVersion) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched)
+                continue;
+        }
+
+        if (!loader.isEmpty()) {
+            bool matched = false;
+            for (const QJsonValue &l : object.value(QStringLiteral("loaders")).toArray()) {
+                if (l.toString().compare(loader, Qt::CaseInsensitive) == 0) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched)
+                continue;
+        }
+
+        const QString date = object.value(QStringLiteral("date_published")).toString();
+        if (best.isEmpty() || date > bestDate) {
+            best = object;
+            bestDate = date;
+        }
+    }
+    return best;
+}
+
 void VanillaKernel::installContent(const QString &instanceId, const QString &projectId,
-                                   const QString &kind, const QString &title)
+                                   const QString &kind, const QString &title,
+                                   const QString &forcedVersionId)
 {
     const QVariantMap instance = m_store ? m_store->instance(instanceId) : QVariantMap();
     if (instance.isEmpty()) {
@@ -873,11 +922,16 @@ void VanillaKernel::installContent(const QString &instanceId, const QString &pro
     const QString instanceDir = m_store->instanceDir(instanceId)
         + QLatin1Char('/') + folderForKind(kind);
 
+    // 实例的 MC 版本和加载器 —— 用来挑一个真的能跑的版本
+    const QString gameVersion = instance.value(QStringLiteral("versionId")).toString();
+    const QString loader = instance.value(QStringLiteral("loader")).toString().toLower();
+
     setStage(QStringLiteral("查询模组 %1").arg(title.isEmpty() ? projectId : title));
     QNetworkReply *reply = m_net->get(
         modrinthRequest(modrinthBase() + QStringLiteral("/project/%1/version").arg(projectId)));
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, projectId, title, instanceDir]() {
+            [this, reply, projectId, title, instanceDir, gameVersion, loader,
+             forcedVersionId]() {
                 reply->deleteLater();
                 if (reply->error() != QNetworkReply::NoError) {
                     fail(QStringLiteral("查模组版本失败：%1").arg(reply->errorString()));
@@ -890,7 +944,32 @@ void VanillaKernel::installContent(const QString &instanceId, const QString &pro
                     return;
                 }
 
-                const QJsonObject version = versions.first().toObject();
+                QJsonObject version;
+                if (!forcedVersionId.isEmpty()) {
+                    // 用户在详情页点名要的版本
+                    for (const QJsonValue &value : versions) {
+                        const QJsonObject candidate = value.toObject();
+                        if (candidate.value(QStringLiteral("id")).toString() == forcedVersionId) {
+                            version = candidate;
+                            break;
+                        }
+                    }
+                    if (version.isEmpty()) {
+                        fail(QStringLiteral("在版本列表里找不到指定的那个版本"));
+                        return;
+                    }
+                } else {
+                    version = pickContentVersion(versions, gameVersion, loader);
+                    if (version.isEmpty()) {
+                        fail(QStringLiteral("%1 没有适配 %2 / %3 的版本 —— 到详情页里手动挑一个")
+                                 .arg(title.isEmpty() ? projectId : title,
+                                      gameVersion.isEmpty() ? QStringLiteral("该实例")
+                                                            : gameVersion,
+                                      loader.isEmpty() ? QStringLiteral("任意加载器") : loader));
+                        return;
+                    }
+                }
+
                 const QString label = title.isEmpty() ? projectId : title;
 
                 QList<DownloadItem> items;

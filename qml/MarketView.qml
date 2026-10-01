@@ -11,6 +11,10 @@ Item {
     property string versionFilter: ""
     property string loaderFilter: ""
     signal installRequested(var project)
+    // 点卡片 → 打开详情页。
+    // 以前是直接装，但内核挑版本用的是 versions.first()，而 Modrinth 的顺序
+    // 不保证跟当前实例对得上，经常装到不兼容的版本。现在让人自己挑。
+    signal detailRequested(var project)
 
     // 外面改了筛选（例如从实例设置进来时预填了该实例的 MC 版本），
     // 把输入框同步过来。用户自己打字时不会走到这儿 —— 那时 versionFilter 还没变。
@@ -360,7 +364,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: view.installRequested(modelData)
+                    onClicked: view.detailRequested(modelData)
                 }
             }
 

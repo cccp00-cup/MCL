@@ -24,11 +24,28 @@ Item {
         return ""
     }
 
+
+    // 详情页打开中（null = 显示列表）
+    property var detailProject: null
+
+    readonly property var targetInstanceInfo: {
+        if (modMarket.targetInstance === "")
+            return null
+        const list = kernel.instances
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].id === modMarket.targetInstance)
+                return list[i]
+        }
+        return null
+    }
+
     MarketView {
+        visible: root.detailProject === null
         id: marketView
         anchors.fill: parent
         client: modMarket
         kind: "mod"
+        onDetailRequested: function (project) { root.detailProject = project }
         onInstallRequested: function (project) {
             // 从「实例设置」进来的话，市场已经被绑到那个实例上了，直接装
             if (modMarket.targetInstance !== "") {
@@ -45,6 +62,7 @@ Item {
     McMenu {
         id: targetMenu
         property var project: null
+        property string versionId: ""
         entries: {
             const out = []
             const list = kernel.instances
@@ -59,7 +77,35 @@ Item {
         onTriggered: function (instanceId) {
             if (instanceId === "" || !targetMenu.project)
                 return
-            kernel.installMod(instanceId, targetMenu.project.id, targetMenu.project.title)
+            kernel.installMod(instanceId, targetMenu.project.id, targetMenu.project.title,
+                               targetMenu.versionId)
         }
     }
+
+    // 详情页：摊开所有版本让用户自己挑，并把匹配实例的标出来
+    MarketDetail {
+        anchors.fill: parent
+        visible: root.detailProject !== null
+        client: modMarket
+        project: root.detailProject
+        kind: "mod"
+        instanceGameVersion: root.targetInstanceInfo
+                             ? String(root.targetInstanceInfo.versionId) : ""
+        instanceLoader: root.targetInstanceInfo
+                        ? String(root.targetInstanceInfo.loader).toLowerCase() : ""
+        onBackRequested: root.detailProject = null
+        onInstallRequested: function (version) {
+            // 用户点名要的版本，一路带到底 —— 内核不会再自己挑
+            if (modMarket.targetInstance !== "") {
+                kernel.installMod(modMarket.targetInstance, root.detailProject.id,
+                                   root.detailProject.title, version.id)
+                return
+            }
+            // 没绑实例就先问装到哪，把版本一起带过去
+            targetMenu.project = root.detailProject
+            targetMenu.versionId = version.id
+            targetMenu.open()
+        }
+    }
+
 }

@@ -21,11 +21,28 @@ Item {
         return ""
     }
 
+
+    // 详情页打开中（null = 显示列表）
+    property var detailProject: null
+
+    readonly property var targetInstanceInfo: {
+        if (resourceMarket.targetInstance === "")
+            return null
+        const list = kernel.instances
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].id === resourceMarket.targetInstance)
+                return list[i]
+        }
+        return null
+    }
+
     MarketView {
+        visible: root.detailProject === null
         id: marketView
         anchors.fill: parent
         client: resourceMarket
         kind: "resourcepack"
+        onDetailRequested: function (project) { root.detailProject = project }
         onInstallRequested: function (project) {
             if (resourceMarket.targetInstance !== "") {
                 kernel.installContent(resourceMarket.targetInstance, project.id, "resourcepack",
@@ -40,6 +57,7 @@ Item {
     McMenu {
         id: targetMenu
         property var project: null
+        property string versionId: ""
         dark: true
         entries: {
             const out = []
@@ -57,4 +75,31 @@ Item {
                                   targetMenu.project.title)
         }
     }
+
+    // 详情页：摊开所有版本让用户自己挑，并把匹配实例的标出来
+    MarketDetail {
+        anchors.fill: parent
+        visible: root.detailProject !== null
+        client: resourceMarket
+        project: root.detailProject
+        kind: "resourcepack"
+        instanceGameVersion: root.targetInstanceInfo
+                             ? String(root.targetInstanceInfo.versionId) : ""
+        instanceLoader: root.targetInstanceInfo
+                        ? String(root.targetInstanceInfo.loader).toLowerCase() : ""
+        onBackRequested: root.detailProject = null
+        onInstallRequested: function (version) {
+            // 用户点名要的版本，一路带到底 —— 内核不会再自己挑
+            if (resourceMarket.targetInstance !== "") {
+                kernel.installContent(resourceMarket.targetInstance, root.detailProject.id,
+                                   "resourcepack", root.detailProject.title, version.id)
+                return
+            }
+            // 没绑实例就先问装到哪，把版本一起带过去
+            targetMenu.project = root.detailProject
+            targetMenu.versionId = version.id
+            targetMenu.open()
+        }
+    }
+
 }

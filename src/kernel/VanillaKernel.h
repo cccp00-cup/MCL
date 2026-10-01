@@ -78,13 +78,19 @@ public:
     // 把一个 Modrinth 模组装进指定实例的 mods/
     // 把 Modrinth 上的内容装进实例。kind 决定落哪个目录：
     //   "mod" → mods/   "resourcepack" → resourcepacks/   "shader" → shaderpacks/
+    // versionId 为空 = 按实例的 MC 版本和加载器自动挑最新；给了就装那一个。
+    static QJsonObject pickContentVersion(const QJsonArray &versions,
+                                          const QString &gameVersion,
+                                          const QString &loader);
     Q_INVOKABLE void installContent(const QString &instanceId, const QString &projectId,
                                     const QString &kind = QStringLiteral("mod"),
-                                    const QString &title = QString());
+                                    const QString &title = QString(),
+                                    const QString &versionId = QString());
     Q_INVOKABLE void installMod(const QString &instanceId, const QString &projectId,
-                                const QString &title = QString())
+                                const QString &title = QString(),
+                                const QString &versionId = QString())
     {
-        installContent(instanceId, projectId, QStringLiteral("mod"), title);
+        installContent(instanceId, projectId, QStringLiteral("mod"), title, versionId);
     }
 
     // 装模组时顺带把它声明"必需"的依赖也拉下来（不含 optional / incompatible）

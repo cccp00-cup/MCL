@@ -37,6 +37,89 @@ void ModrinthClient::setError(const QString &error)
     Q_EMIT failed(error);
 }
 
+void ModrinthClient::fetchVersions(const QString &projectId)
+{
+    if (projectId.isEmpty())
+        return;
+
+    m_projectVersions.clear();
+    Q_EMIT projectVersionsChanged();
+    m_versionsLoading = true;
+    Q_EMIT versionsLoadingChanged();
+
+    QNetworkRequest request{
+        QUrl(baseUrl() + QStringLiteral("/project/%1/version").arg(projectId))
+    };
+    Net::configure(request);
+
+    QNetworkReply *reply = m_net->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        m_versionsLoading = false;
+        Q_EMIT versionsLoadingChanged();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            setError(QStringLiteral("取版本列表失败：%1").arg(reply->errorString()));
+            return;
+        }
+
+        const QJsonArray array = QJsonDocument::fromJson(reply->readAll()).array();
+        QVariantList out;
+        out.reserve(array.size());
+
+        for (const QJsonValue &value : array) {
+            const QJsonObject object = value.toObject();
+
+            // 只留主文件；没有 primary 标记就退回第一个
+            const QJsonArray files = object.value(QStringLiteral("files")).toArray();
+            QString url;
+            QString filename;
+            qint64 size = 0;
+            for (const QJsonValue &fileValue : files) {
+                const QJsonObject file = fileValue.toObject();
+                const bool primary = file.value(QStringLiteral("primary")).toBool();
+                if (url.isEmpty() || primary) {
+                    url = file.value(QStringLiteral("url")).toString();
+                    filename = file.value(QStringLiteral("filename")).toString();
+                    size = file.value(QStringLiteral("size")).toVariant().toLongLong();
+                }
+                if (primary)
+                    break;
+            }
+            if (url.isEmpty())
+                continue;   // 没有可下文件的版本对安装没意义
+
+            QStringList gameVersions;
+            for (const QJsonValue &v : object.value(QStringLiteral("game_versions")).toArray())
+                gameVersions << v.toString();
+            QStringList loaders;
+            for (const QJsonValue &v : object.value(QStringLiteral("loaders")).toArray())
+                loaders << v.toString();
+
+            QVariantMap item;
+            item[QStringLiteral("id")] = object.value(QStringLiteral("id")).toString();
+            item[QStringLiteral("name")] = object.value(QStringLiteral("name")).toString();
+            item[QStringLiteral("versionNumber")] =
+                object.value(QStringLiteral("version_number")).toString();
+            item[QStringLiteral("datePublished")] =
+                object.value(QStringLiteral("date_published")).toString().left(10);
+            item[QStringLiteral("downloads")] =
+                object.value(QStringLiteral("downloads")).toVariant().toLongLong();
+            item[QStringLiteral("gameVersions")] = gameVersions;
+            item[QStringLiteral("loaders")] = loaders;
+            item[QStringLiteral("gameVersionsText")] = gameVersions.join(QStringLiteral(", "));
+            item[QStringLiteral("loadersText")] = loaders.join(QStringLiteral(", "));
+            item[QStringLiteral("downloadUrl")] = url;
+            item[QStringLiteral("filename")] = filename;
+            item[QStringLiteral("size")] = size;
+            out << item;
+        }
+
+        m_projectVersions = out;
+        Q_EMIT projectVersionsChanged();
+    });
+}
+
 void ModrinthClient::clear()
 {
     ++m_requestId; // 让在途请求的结果作废
