@@ -20,6 +20,8 @@ jobs:
     # 后者已经漂到新镜像上去了，预装的 VS 版本跟着变，
     # 而 Qt 的 win64_msvc2022_64 是要配 VS 2022 用的，绑住更稳。
     runs-on: windows-2022
+    # 保险：冒烟那步用 Start-Process -Wait，万一程序不退出也不至于挂满 6 小时
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -47,11 +49,19 @@ jobs:
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
-          & .\build\Release\mcl.exe --shot smoke.png
+
+          # 必须用 Start-Process -Wait，不能用 `& mcl.exe`。
+          # mcl.exe 是 WIN32_EXECUTABLE（GUI 子系统），PowerShell 调 GUI 程序时
+          # **不会等它结束**，直接往下走 —— 第一次 CI 就栽在这儿：
+          # 0.3 秒后就去找截图，那会儿 QML 还没加载完呢。Linux 下 shell 会等，所以没暴露过。
+          Start-Process -FilePath ".\build\Release\mcl.exe" `
+                        -ArgumentList "--shot", "smoke.png" `
+                        -Wait
+
           if (-not (Test-Path smoke.png)) {
             throw "没出图 —— QML 八成没加载起来"
           }
-          Write-Host "截图 $(  (Get-Item smoke.png).Length ) 字节"
+          Write-Host "截图 $((Get-Item smoke.png).Length) 字节"
 
       - name: 看看 mcl.log
         if: always()
@@ -90,6 +100,7 @@ jobs:
   linux:
     name: Linux (回归)
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
