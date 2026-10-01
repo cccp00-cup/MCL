@@ -94,13 +94,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 装依赖
+      - name: 装编译工具和系统依赖
+        # 只装系统层的：编译器、ninja、zlib、OpenGL。
+        # Qt **不**走 apt —— ubuntu-24.04 带的只有 Qt 6.4.2，而 mcl 要求 6.5+，
+        # 会直接在 find_package 那步失败。用和 Windows 一样的 6.8.2，
+        # 顺便保证 CI 和本机开发环境版本一致。
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build zlib1g-dev \
-            qt6-base-dev qt6-declarative-dev qt6-tools-dev \
-            libgl1-mesa-dev
+            build-essential ninja-build zlib1g-dev libgl1-mesa-dev
+
+      - name: 装 Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.2'
+          cache: true
 
       - name: 配置
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
