@@ -15,6 +15,37 @@ Item {
 
     readonly property var allVersions: kernel.availableVersions
 
+    // —— 安装进度。点「创建」之后要下 client.jar 和一堆库，几十上百 MB，
+    // 没有反馈的话用户只会觉得按钮点坏了。
+    property real progress: 0
+    // 记录是哪个版本在装 —— 建完之后要能认出来
+    property string creatingId: ""
+    readonly property string stage: kernel.currentStage
+    readonly property bool failed: stage.indexOf("失败") >= 0
+    readonly property bool installing: creatingId !== "" && stage !== ""
+                                        && !failed && stage.indexOf("完成") < 0
+
+    Connections {
+        target: kernel
+        function onDownloadProgress(done, total, bytes, bytesTotal) {
+            if (bytesTotal > 0)
+                root.progress = Math.min(1, bytes / bytesTotal)
+            else if (total > 0)
+                root.progress = done / total
+        }
+        function onStageChanged(stage) {
+            if (stage.indexOf("失败") >= 0)
+                root.creatingId = ""     // 失败就把按钮放回去，让用户能重试
+        }
+        // 实例建好了：清掉进度，按钮恢复（窗口留着，方便连着建几个）
+        function onInstanceCreated(instanceId) {
+            if (instanceId === "")
+                return
+            root.creatingId = ""
+            root.progress = 0
+        }
+    }
+
     // 筛选 + 搜索。九百来条的 JS 循环是微秒级，不值得做增量。
     readonly property var shown: {
         const out = []
@@ -65,8 +96,10 @@ Item {
     }
 
     function create() {
-        if (selectedId === "")
+        if (selectedId === "" || root.installing)
             return
+        root.creatingId = selectedId
+        root.progress = 0
         const label = nameField.text.trim()
         if (loaderId === "fabric") {
             kernel.createFabricInstance(selectedId, label)
@@ -390,23 +423,45 @@ Item {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            text: root.selectedId === ""
-                  ? qsTr("选一个版本")
-                  : qsTr("将创建：%1").arg(root.selectedId)
+            text: {
+                if (root.installing)
+                    return root.stage
+                if (root.failed)
+                    return root.stage
+                if (root.selectedId === "")
+                    return qsTr("选一个版本")
+                return qsTr("将创建：%1").arg(root.selectedId)
+            }
             font.pixelSize: 11
-            color: Theme.textTertiary
+            color: root.failed ? "#c05050" : Theme.textTertiary
         }
 
         Rectangle {
-            width: 96
+            id: createButton
+            width: 108
             height: 30
             radius: 7
-            color: createMouse.containsMouse && root.selectedId !== ""
+            color: createMouse.containsMouse && root.selectedId !== "" && !root.installing
                    ? Qt.darker(Theme.accent, 1.1) : Theme.accent
             opacity: root.selectedId === "" ? 0.4 : 1.0
+            clip: true
+
+            // 进度就画在按钮里：底色上盖一层亮色，从左往右长。
+            // 放在按钮内部而不是旁边，是为了让「进度」和「点下去的东西」是同一个。
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * root.progress
+                color: Qt.rgba(1, 1, 1, 0.32)
+                visible: root.installing
+            }
+
             Text {
                 anchors.centerIn: parent
-                text: qsTr("创建")
+                text: root.installing
+                      ? qsTr("%1%").arg(Math.round(root.progress * 100))
+                      : qsTr("创建")
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
                 color: "#ffffff"
@@ -415,7 +470,7 @@ Item {
                 id: createMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                enabled: root.selectedId !== ""
+                enabled: root.selectedId !== "" && !root.installing
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.create()
             }
