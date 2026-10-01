@@ -1,16 +1,12 @@
 import QtQuick
 
-// 「关于本机」应用 —— 苹果那种长方形磨砂玻璃对话框。
+// 「关于本机」—— 苹果那种竖向窄卡片，没有标题栏。
 //
 // 玻璃不是画出来的假象：按**窗口在桌面上的实际位置**从壁纸的模糊版本里取对应
-// 那一块（GlassProvider 的 glassrect 端点），所以它会跟着背后的壁纸变 ——
-// 壁纸是紫的，这块就是紫的；壁纸换了，它也跟着换。
+// 那一块（GlassProvider 的 glassrect 端点），所以它会跟着背后的壁纸变。
 //
-// 坐标用的是 win.posX / win.posY（窗口在桌面里的位置），和 GlassProvider
-// 那套桌面坐标是同一套。
-//
-// 注意这里必须带 `win.` 前缀：QML 动态创建的组件能继承创建点的 **id**，
-// 但**看不到那边的属性** —— 直接写 desktopWidth 会 ReferenceError。
+// 这里必须带 `win.` 前缀访问属性：QML 动态创建的组件能继承创建点的 **id**，
+// 但看不到那边的属性 —— 直接写 desktopWidth 会 ReferenceError。
 Item {
     id: root
 
@@ -23,43 +19,89 @@ Item {
                 + width + "/" + height + "/" + Theme.windowRadius + "/"
                 + win.workArea.width + "/" + win.workArea.height
         sourceSize: Qt.size(Math.max(1, Math.ceil(width)), Math.max(1, Math.ceil(height)))
-        // 图还没出来时别留个洞
         visible: status === Image.Ready
     }
 
-    // 兜底底材。玻璃出来之前/之后都垫着，只是玻璃一盖上去就看不见了。
+    // 兜底底材：玻璃还没出来（或者取不到）时垫着，圆角要和窗口一致
     Rectangle {
         anchors.fill: parent
-        color: shellSettings.darkMode ? Qt.rgba(0.10, 0.10, 0.12, 0.72)
-                                      : Qt.rgba(0.98, 0.98, 0.99, 0.72)
+        radius: Theme.windowRadius
+        color: shellSettings.darkMode ? Qt.rgba(0.12, 0.12, 0.14, 0.92)
+                                      : Qt.rgba(0.97, 0.97, 0.98, 0.92)
         z: -1
     }
 
-    // 玻璃之上再压一层很淡的底 —— 不然密密麻麻的图标/文字压上去会读不清
+    // 玻璃之上压一层很淡的底 —— 不然后面花花绿绿的壁纸会把文字冲掉
     Rectangle {
         anchors.fill: parent
-        color: shellSettings.darkMode ? Qt.rgba(0.06, 0.06, 0.08, 0.30)
-                                      : Qt.rgba(1, 1, 1, 0.34)
+        radius: Theme.windowRadius
+        color: shellSettings.darkMode ? Qt.rgba(0.06, 0.06, 0.08, 0.32)
+                                      : Qt.rgba(1, 1, 1, 0.36)
     }
 
-    // ——————————————— 图标 + 名称 / 版本
-    Row {
-        id: header
-        anchors.left: parent.left
+    // ——————————————— 关闭按钮（右上角，替代交通灯）
+    Rectangle {
+        id: closeButton
+        anchors.right: parent.right
         anchors.top: parent.top
-        anchors.leftMargin: 28
-        anchors.topMargin: 30
-        spacing: 18
+        anchors.rightMargin: 11
+        anchors.topMargin: 11
+        width: 22
+        height: 22
+        radius: 11
+        color: closeMouse.containsMouse
+               ? (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(0, 0, 0, 0.10))
+               : (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.05))
+
+        // 一个 ×，用两根细矩形拼，省得依赖图标字体
+        Item {
+            anchors.centerIn: parent
+            width: 11
+            height: 11
+            Rectangle {
+                anchors.centerIn: parent
+                width: 11
+                height: 1.4
+                radius: 0.7
+                color: Theme.textSecondary
+                rotation: 45
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: 11
+                height: 1.4
+                radius: 0.7
+                color: Theme.textSecondary
+                rotation: -45
+            }
+        }
+
+        MouseArea {
+            id: closeMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: desktop.closeWindow(win.winId)
+        }
+    }
+
+    // ——————————————— 图标 + 名称 / 版本（居中）
+    Column {
+        id: header
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: 42
+        spacing: 9
 
         Rectangle {
-            width: 82
-            height: 82
-            radius: 18
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 92
+            height: 92
+            radius: 20
             gradient: Gradient {
                 GradientStop { position: 0.0; color: "#6fb2ff" }
                 GradientStop { position: 1.0; color: "#13408e" }
             }
-            // 图标自身的一点点内阴影感
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius
@@ -67,31 +109,27 @@ Item {
                 border.width: 1
                 border.color: Qt.rgba(1, 1, 1, 0.28)
             }
-
             Image {
                 anchors.centerIn: parent
-                width: 50
-                height: 50
+                width: 56
+                height: 56
                 source: "qrc:/mcl/icons/cube.svg"
-                sourceSize: Qt.size(50, 50)
+                sourceSize: Qt.size(56, 56)
             }
         }
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
-
-            Text {
-                text: "mcl"
-                font.pixelSize: 25
-                font.weight: Font.DemiBold
-                color: Theme.textPrimary
-            }
-            Text {
-                text: qsTr("版本 %1").arg(Qt.application.version)
-                font.pixelSize: 12
-                color: Theme.textSecondary
-            }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "mcl"
+            font.pixelSize: 21
+            font.weight: Font.DemiBold
+            color: Theme.textPrimary
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("版本 %1").arg(Qt.application.version)
+            font.pixelSize: 11
+            color: Theme.textSecondary
         }
     }
 
@@ -101,22 +139,23 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: header.bottom
-        anchors.leftMargin: 28
-        anchors.rightMargin: 28
-        anchors.topMargin: 22
+        anchors.leftMargin: 26
+        anchors.rightMargin: 26
+        anchors.topMargin: 18
         height: 1
         color: Theme.separator
     }
 
-    // ——————————————— 信息
+    // ——————————————— 信息（窄窗口用"标签在上、值在下"的堆叠）
     Column {
+        id: info
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: divider.bottom
-        anchors.leftMargin: 28
-        anchors.rightMargin: 28
+        anchors.leftMargin: 26
+        anchors.rightMargin: 26
         anchors.topMargin: 14
-        spacing: 6
+        spacing: 11
 
         Repeater {
             model: [
@@ -125,22 +164,20 @@ Item {
                 { k: qsTr("界面"), v: qsTr("Qt 6 · QML 全自绘") }
             ]
 
-            delegate: Row {
+            delegate: Column {
                 required property var modelData
-                width: parent.width
-                spacing: 12
+                width: info.width
+                spacing: 1
 
                 Text {
-                    width: 76
                     text: modelData.k
-                    horizontalAlignment: Text.AlignRight
-                    font.pixelSize: 11
+                    font.pixelSize: 10
                     color: Theme.textTertiary
                 }
                 Text {
-                    width: parent.width - 88
+                    width: parent.width
                     text: modelData.v
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     color: Theme.textPrimary
                     elide: Text.ElideMiddle
                 }
@@ -151,16 +188,15 @@ Item {
     // ——————————————— 底部按钮
     Rectangle {
         id: detailsButton
-        anchors.right: parent.right
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.rightMargin: 16
-        anchors.bottomMargin: 14
-        width: detailsLabel.width + 26
-        height: 26
+        anchors.bottomMargin: 16
+        width: detailsLabel.width + 30
+        height: 27
         radius: 7
         color: detailsMouse.containsMouse
-               ? (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0, 0, 0, 0.07))
-               : (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.55))
+               ? (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(0, 0, 0, 0.08))
+               : (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.60))
         border.width: 1
         border.color: shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0, 0, 0, 0.10)
 

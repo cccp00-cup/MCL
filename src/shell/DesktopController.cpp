@@ -235,12 +235,12 @@ void DesktopController::openApp(const QString &appId)
     const qreal step = kCascadeStep * (m_cascade % kCascadeWrap);
     ++m_cascade;
 
-    // 「关于本机」是苹果那种小长方形对话框，不跟其它应用共用尺寸
+    // 「关于本机」是苹果那种竖向窄卡片，不跟其它应用共用尺寸
     qreal w = kDefaultW;
     qreal h = kDefaultH;
     if (appId == QLatin1String("about")) {
-        w = 470;
-        h = 300;
+        w = 300;
+        h = 430;
     }
 
     const QRectF geometry(kBaseX + step, kBaseY + step, w, h);

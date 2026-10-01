@@ -24,6 +24,9 @@ Item {
     property bool isFocused: true
     property rect workArea: Qt.rect(0, 0, 1280, 800)
     property real minTop: 0
+    // 去掉标题栏的窗口（苹果那种「关于本机」）。内容铺满整个窗口，
+    // 关闭按钮由内容自己提供。
+    property bool chromeless: false
 
     // ——— 状态 ———
     readonly property bool dragging: titleDrag.active
@@ -72,16 +75,18 @@ Item {
         id: chrome
         anchors.fill: parent
         radius: Theme.windowRadius
-        color: Theme.windowBody
-        border.width: 1
+        // 无标题栏的窗口自己画底（磨砂玻璃），这里就不铺了
+        color: win.chromeless ? "transparent" : Theme.windowBody
+        border.width: win.chromeless ? 0 : 1
         border.color: Theme.windowBorder
         clip: true
 
         // —— 标题栏
         Rectangle {
             id: titleBar
+            visible: !win.chromeless
             width: parent.width
-            height: Theme.titleBarHeight
+            height: win.chromeless ? 0 : Theme.titleBarHeight
             radius: Theme.windowRadius
             color: win.isFocused ? Theme.windowTitleBar : Qt.lighter(Theme.windowTitleBar, 1.05)
 
@@ -213,12 +218,46 @@ Item {
             }
         }
 
+        // —— 无标题栏时的拖动
+        // 没有标题栏可抓，就让整块背景都能拖。z:-1 压在内容之下 ——
+        // Rectangle / Image 本身不接收鼠标，点击会透到这儿来；
+        // 内容里的按钮有自己的 MouseArea，不受影响。
+        MouseArea {
+            id: chromeDrag
+            anchors.fill: parent
+            visible: win.chromeless
+            z: -1
+            acceptedButtons: Qt.LeftButton
+
+            property real startMouseX: 0
+            property real startMouseY: 0
+            property real startWinX: 0
+            property real startWinY: 0
+
+            onPressed: function (mouse) {
+                desktop.focusWindow(win.winId)
+                startWinX = win.posX
+                startWinY = win.posY
+                const p = mapToItem(win.parent, mouse.x, mouse.y)
+                startMouseX = p.x
+                startMouseY = p.y
+            }
+            onPositionChanged: function (mouse) {
+                if (!pressed)
+                    return
+                const p = mapToItem(win.parent, mouse.x, mouse.y)
+                win.posX = startWinX + (p.x - startMouseX)
+                win.posY = Math.max(win.minTop, startWinY + (p.y - startMouseY))
+            }
+            onReleased: win.geometryCommitted(win.posX, win.posY, win.width, win.height)
+        }
+
         // —— 标题栏分隔线
         Rectangle {
             id: titleSeparator
             anchors.top: titleBar.bottom
             width: parent.width
-            height: 1
+            height: win.chromeless ? 0 : 1
             color: Theme.separator
         }
 
@@ -227,7 +266,7 @@ Item {
             id: content
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.top: titleSeparator.bottom
+            anchors.top: win.chromeless ? parent.top : titleSeparator.bottom
             anchors.bottom: parent.bottom
             sourceComponent: {
                 switch (win.app) {

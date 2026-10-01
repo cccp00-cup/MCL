@@ -120,6 +120,8 @@ Window {
                 isMaximized: maximized
                 isFocused: focused
                 z: stackZ
+                // 「关于本机」是苹果那种无标题栏的窄窗口
+                chromeless: appId === "about"
                 workArea: Qt.rect(root.workX, root.workY, root.workWidth, root.workHeight)
                 minTop: root.menuBarH
 

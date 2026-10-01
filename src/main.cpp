@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("mcl"));
     // 不设 organizationName：否则 QStandardPaths::AppConfigLocation 会变成
     // ~/.config/mcl/mcl（org/app 各一层），配置目录凭空多一层。
-    app.setApplicationVersion(QStringLiteral("0.6.0"));
+    app.setApplicationVersion(QStringLiteral("0.7.0"));
     app.setDesktopFileName(QStringLiteral("mcl"));
 
     // 界面全部自绘，不依赖任何平台控件样式
