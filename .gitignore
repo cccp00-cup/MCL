@@ -1,0 +1,33 @@
+# 构建产物
+build/
+build-pkg/
+build-*/
+cmake-build-*/
+
+# CMake / Qt 生成物
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+*.qmlc
+*.jsc
+.qmake.stash
+moc_*.cpp
+qrc_*.cpp
+
+# 冒烟测试留下的截图和日志
+smoke.png
+*.log
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.user
+*.swp
+*~
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,121 @@
+name: build
+
+# 这个 workflow 的主要目的不是"出包"，而是**把 Windows 真的跑一遍**。
+# mcl 全部开发都在 Linux 上做的，Windows 那边从来没有编译、更没有运行过 ——
+# 靠读代码猜"应该没问题"是不够的，得有台真机器替我们回答。
+#
+# 三个 job：
+#   windows —— 编译 + 离屏跑一帧（截图存在说明 QML 真的加载起来了）+ 出 NSIS 安装包
+#   linux   —— 回归，确保 Windows 的改动没把原来那条路弄坏
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Windows (MSVC + Qt 6.8)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 装 Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.2'
+          # 用 MSVC 而不是 mingw：runner 自带 MSVC 工具链，
+          # 省掉"CMake 挑错编译器去链 mingw 版 Qt"这类麻烦
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: 配置
+        # zlib 走 FetchContent，需要联网拉源码
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: 编译
+        run: cmake --build build --config Release
+
+      - name: 冒烟 —— 离屏跑一帧
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & .\build\Release\mcl.exe --shot smoke.png
+          if (-not (Test-Path smoke.png)) {
+            throw "没出图 —— QML 八成没加载起来"
+          }
+          Write-Host "截图 $(  (Get-Item smoke.png).Length ) 字节"
+
+      - name: 看看 mcl.log
+        if: always()
+        shell: pwsh
+        run: |
+          # Windows 上没有控制台，日志全在这儿 —— 出问题时它是唯一的线索
+          $log = Join-Path $env:LOCALAPPDATA "mcl\mcl.log"
+          if (Test-Path $log) {
+            Write-Host "----- mcl.log（末尾 60 行）-----"
+            Get-Content $log -Tail 60
+          } else {
+            Write-Host "没有生成 mcl.log"
+          }
+
+      - name: 冒烟截图存档
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshot
+          path: smoke.png
+          if-no-files-found: warn
+
+      - name: 打 NSIS 安装包
+        working-directory: build
+        # qt_generate_deploy_app_script 生成的 install 脚本会在这时跑 windeployqt，
+        # 把 Qt 的 dll 和 QML 插件收进安装目录
+        run: cpack -C Release
+
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcl-windows-installer
+          path: build/mcl-*-win64.exe
+          if-no-files-found: error
+
+  linux:
+    name: Linux (回归)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build zlib1g-dev \
+            qt6-base-dev qt6-declarative-dev qt6-tools-dev \
+            libgl1-mesa-dev
+
+      - name: 配置
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: 编译
+        run: cmake --build build
+
+      - name: 冒烟 —— 离屏跑一帧
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ./build/mcl --shot smoke.png
+          test -s smoke.png || { echo "没出图"; exit 1; }
+
+      - name: 打 deb
+        run: |
+          cd build && cpack -G DEB
+
+      - name: 上传 deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcl-linux-deb
+          path: build/*.deb
+          if-no-files-found: error

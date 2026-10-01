@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- 底板：液态玻璃蓝 -->
+    <linearGradient id="bg" x1="0.12" y1="0" x2="0.88" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="0.52" stop-color="#2c78fb"/>
+      <stop offset="1" stop-color="#122e6b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.32" cy="0.06" r="0.64">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.34"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vign" cx="0.5" cy="1.06" r="0.86">
+      <stop offset="0" stop-color="#04122f" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#04122f" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 方块三面 -->
+    <linearGradient id="top" x1="0.15" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#d6fdec"/>
+      <stop offset="0.45" stop-color="#84e6b6"/>
+      <stop offset="1" stop-color="#45c88c"/>
+    </linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#a8ccff"/>
+      <stop offset="1" stop-color="#5b9cff"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="0.45" y2="1">
+      <stop offset="0" stop-color="#3a79e4"/>
+      <stop offset="1" stop-color="#173f92"/>
+    </linearGradient>
+
+    <!-- 整块玻璃反光 -->
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity="0.02"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.14"/>
+    </linearGradient>
+
+    <!-- 方块投在底板上的柔影 -->
+    <radialGradient id="drop" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#04122f" stop-opacity="0.46"/>
+      <stop offset="0.62" stop-color="#04122f" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#04122f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── 底板 ───────────────────────────────────────────── -->
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#bg)"/>
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#glow)"/>
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#vign)"/>
+
+  <!-- 方块投在底板上的柔影 -->
+  <ellipse cx="256" cy="384" rx="152" ry="46" fill="url(#drop)"/>
+
+  <!-- 方块外辉光（多层近似模糊，避免 filter 以兼容各渲染器） -->
+  <g fill="#ffffff">
+    <path d="M256 136 L376 206 L376 306 L256 376 L136 306 L136 206 Z"
+          fill-opacity="0.03" transform="translate(256 256) scale(1.22) translate(-256 -256)"/>
+    <path d="M256 136 L376 206 L376 306 L256 376 L136 306 L136 206 Z"
+          fill-opacity="0.06" transform="translate(256 256) scale(1.13) translate(-256 -256)"/>
+    <path d="M256 136 L376 206 L376 306 L256 376 L136 306 L136 206 Z"
+          fill-opacity="0.11" transform="translate(256 256) scale(1.06) translate(-256 -256)"/>
+  </g>
+
+  <g>
+    <!-- 左面 -->
+    <path d="M136 206 L256 276 L256 376 L136 306 Z" fill="url(#left)"/>
+    <!-- 右面 -->
+    <path d="M256 276 L376 206 L376 306 L256 376 Z" fill="url(#right)"/>
+    <!-- 顶面（青草玻璃） -->
+    <path d="M256 136 L376 206 L256 276 L136 206 Z" fill="url(#top)"/>
+
+    <!-- 顶面左上受光 -->
+    <path d="M256 136 L136 206 L256 276 Z" fill="#ffffff" fill-opacity="0.16"/>
+    <!-- 左面竖向玻璃高光 -->
+    <path d="M180 236 L180 322" stroke="#ffffff" stroke-opacity="0.34"
+          stroke-width="15" stroke-linecap="round"/>
+    <!-- 右面底部压暗 -->
+    <path d="M256 336 L376 266 L376 306 L256 376 Z" fill="#04122f" fill-opacity="0.16"/>
+
+    <!-- 棱线 -->
+    <g fill="none" stroke="#ffffff" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M256 136 L376 206 L376 306 L256 376 L136 306 L136 206 Z"
+            stroke-opacity="0.62" stroke-width="7"/>
+      <path d="M256 276 L256 376" stroke-opacity="0.40" stroke-width="5"/>
+      <path d="M256 136 L136 206 L256 276 L376 206"
+            stroke-opacity="0.66" stroke-width="7"/>
+    </g>
+  </g>
+
+  <!-- ── 玻璃罩层 ───────────────────────────────────────── -->
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#sheen)"/>
+  <path d="M140 48 C 200 27 312 27 372 48" fill="none" stroke="#ffffff"
+        stroke-opacity="0.38" stroke-width="10" stroke-linecap="round"/>
+  <rect x="11" y="11" width="490" height="490" rx="113" fill="none"
+        stroke="#ffffff" stroke-opacity="0.30" stroke-width="6"/>
+</svg>

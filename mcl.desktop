@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=mcl
+Name[zh_CN]=mcl 桌面
+GenericName=Minecraft Launcher
+Comment=macOS 12 style desktop shell with a Minecraft launcher kernel
+Comment[zh_CN]=在一个窗口里复刻 macOS 12 桌面，并内置 Minecraft 启动内核
+Exec=mcl
+Icon=mcl
+Terminal=false
+Categories=Game;ActionGame;
+Keywords=Minecraft;Launcher;Desktop;macOS;
+StartupNotify=true
+StartupWMClass=mcl
