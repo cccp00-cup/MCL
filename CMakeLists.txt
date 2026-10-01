@@ -23,7 +23,9 @@ if(WIN32)
     # 关键：不要 zlib 的 install 规则。
     # CPack 会把所有 install() 都收进包里，包括 FetchContent 拉来的子项目 ——
     # 于是打 NSIS 时去跑 zlib-build/cmake_install.cmake，撞上它内部的组件检查直接报错。
-    set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
+    # 开关名是 zlib 沿用 CMake 约定的 SKIP_INSTALL_ALL（不是 ZLIB_INSTALL，
+    # 那是我一开始猜错的，改了没用）。
+    set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
     FetchContent_Declare(zlib
         GIT_REPOSITORY https://github.com/madler/zlib.git
         GIT_TAG v1.3.1
