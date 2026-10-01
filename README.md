@@ -1,6 +1,6 @@
 # mcl
 
-> **一个标准尺寸的窗口，窗口里是一整套 macOS 12 桌面。启动器内核复用 PrismLauncher 的源码。**
+> **一个标准尺寸的窗口，窗口里是一整套 macOS 12 桌面。启动器内核完全自研。**
 
 mcl 把 macOS 12 的桌面交互——顶部菜单栏、底部 Dock、自绘窗口、红黄绿交通灯、
 拖拽与缩放——用 Qt 6 + QML **全自绘**实现在一个普通窗口里，同时内置 Minecraft
@@ -106,7 +106,7 @@ cmake --build build -j"$(nproc)"
 
 ```bash
 ./make-deb.sh                     # → build-pkg/mcl_<版本>_<架构>.deb
-sudo apt install ./build-pkg/mcl_0.1.0_amd64.deb
+sudo apt install ./build-pkg/mcl_0.2.0_amd64.deb
 ```
 
 包只装 mcl 本体，Qt6 运行库与 QML 模块由依赖自动补齐。**不依赖 prismlauncher 二进制** ——
@@ -139,9 +139,12 @@ mcl/
 ## 与 PMCL 的关系
 
 PMCL（`../PMCL`）是"PrismLauncher 的前端"：扫它的实例、调它的命令行。
-**mcl 是独立应用**：自带桌面外壳，内核**复用 PrismLauncher 的启动核心源码**
-（`meta/`、`java/`、`minecraft/`、`tasks/` 等，见架构文档第 3.3 节），
-但**不依赖、也不调用它的二进制**。
+
+**mcl 是独立应用**：自带桌面外壳，内核**完全自研** —— 自己读官方版本清单、
+并发下载并逐个校验 SHA1、解压 natives、拼 java 命令行、拉起游戏进程。
+只依赖 Qt 和 zlib，**不依赖 PrismLauncher，也不调用它的二进制**。
+（最初打算复用 PrismLauncher 的启动核心源码，调研后发现关键路径上离不开
+`libarchive` / `tomlplusplus` 这些依赖，于是改为自研。）
 
 PMCL 保留原样，可继续使用。
 

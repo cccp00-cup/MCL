@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -229,7 +229,7 @@ if(UNIX AND NOT APPLE)
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
         "macOS 12 style desktop shell with a Minecraft launcher kernel")
     set(CPACK_PACKAGE_DESCRIPTION
-        "mcl 在一个标准窗口里自绘一整套 macOS 12 桌面（菜单栏、Dock、自绘窗口），并内置 Minecraft 启动内核。内核复用 PrismLauncher 的启动核心源码，但不依赖、也不调用它的二进制。")
+        "mcl 在一个标准窗口里自绘一整套 macOS 12 桌面（菜单栏、Dock、自绘窗口、启动台）。内置完全自研的 Minecraft 启动内核：读官方版本清单、并发下载并校验、解压 natives、拼装 java 命令行并拉起游戏。只依赖 Qt 与 zlib，不依赖 PrismLauncher，也不调用它的二进制。")
     set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/cccp00-cup/mcl")
 
     set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")

@@ -6,7 +6,23 @@ Item {
 
     Component.onDestruction: resourceMarket.targetInstance = ""
 
+    // 从「实例设置」进来时，默认按那个实例的 MC 版本筛 ——
+    // 资源包和光影挑错版本一样不生效。
+    Component.onCompleted: marketView.versionFilter = root.instanceVersion()
+
+    function instanceVersion() {
+        if (resourceMarket.targetInstance === "")
+            return ""
+        const list = kernel.instances
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].id === resourceMarket.targetInstance)
+                return list[i].versionId
+        }
+        return ""
+    }
+
     MarketView {
+        id: marketView
         anchors.fill: parent
         client: resourceMarket
         kind: "resourcepack"

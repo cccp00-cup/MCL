@@ -6,11 +6,15 @@
 
 // 启动内核的抽象接口。
 //
-// mcl 的做法是【复用 PrismLauncher 的启动核心源码，而不是调用它的二进制】。
-// 所以这一层只暴露界面真正需要的能力（枚举实例 / 启动 / 停止 / 日志），实现可替换：
+// 内核是**完全自研**的：自己读版本清单、并发下载并逐个校验 SHA1、解压 natives、
+// 拼 java 命令行、拉起游戏进程，只依赖 Qt 和 zlib。
+// （最早打算复用 PrismLauncher 的启动核心源码，调研后发现关键路径上离不开
+// libarchive / tomlplusplus 这类依赖，装不上也裁不掉，于是改成自研。）
 //
-//   StubKernel   —— 第一期的占位实现，返回假数据，用来先把界面跑通
-//   PrismKernel  —— 后续接 PrismLauncher 的 launcher/ 源码子树
+// 这一层只暴露界面真正需要的能力（枚举实例 / 启动 / 停止 / 日志），实现可替换：
+//
+//   VanillaKernel —— 当前实现，覆盖原版 / Fabric / Forge / NeoForge
+//   StubKernel    —— 最早的占位实现，返回假数据，现在只留作对比调试
 //                   （meta/ 版本元数据、java/ 的查找与校验、minecraft/ 的
 //                    LaunchProfile / Library / Rule / natives、tasks/ 的步骤链）
 //

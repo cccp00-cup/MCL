@@ -111,7 +111,8 @@ Item {
         anchors.topMargin: 8
         height: 24
         spacing: 8
-        visible: view.kind === "mod" // 整合包一般不按加载器筛
+        // 四个市场（模组/整合包/资源包/光影）都按 MC 版本筛。
+        // 版本这东西哪个市场都躲不开 —— 挑了个 1.20.1 的资源包装到 1.21 上照样不生效。
 
         component FilterChip: Rectangle {
             id: chip
@@ -219,7 +220,9 @@ Item {
             }
         }
 
+        // 加载器只有模组和整合包有意义 —— 资源包和光影没有这个概念
         FilterChip {
+            visible: view.kind === "mod" || view.kind === "modpack"
             label: view.loaderFilter === "" ? qsTr("加载器：不限") : view.loaderFilter
             value: view.loaderFilter
             onMenuRequested: loaderMenu.open()
