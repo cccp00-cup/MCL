@@ -1,3 +1,4 @@
+#include "Net.h"
 #include "AccountManager.h"
 
 #include <QClipboard>
@@ -51,6 +52,7 @@ QString offlineUuid(const QString &playerName)
 QNetworkRequest jsonRequest(const QString &url)
 {
     QNetworkRequest request{ QUrl(url) };
+    Net::configure(request);
     request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
@@ -201,6 +203,7 @@ void AccountManager::requestDeviceCode()
     form.addQueryItem(QStringLiteral("response_type"), QStringLiteral("device_code"));
 
     QNetworkRequest request{ QUrl(QString::fromLatin1(kDeviceCodeUrl)) };
+    Net::configure(request);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       QStringLiteral("application/x-www-form-urlencoded"));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
@@ -285,6 +288,7 @@ void AccountManager::pollToken()
                       QStringLiteral("urn:ietf:params:oauth:grant-type:device_code"));
 
     QNetworkRequest request{ QUrl(QString::fromLatin1(kTokenUrl)) };
+    Net::configure(request);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       QStringLiteral("application/x-www-form-urlencoded"));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
@@ -349,6 +353,7 @@ void AccountManager::refreshAccessToken()
     form.addQueryItem(QStringLiteral("grant_type"), QStringLiteral("refresh_token"));
 
     QNetworkRequest request{ QUrl(QString::fromLatin1(kTokenUrl)) };
+    Net::configure(request);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                       QStringLiteral("application/x-www-form-urlencoded"));
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
@@ -488,6 +493,7 @@ void AccountManager::loginMinecraft(const QString &xstsToken, const QString &uhs
 void AccountManager::fetchProfile()
 {
     QNetworkRequest request{ QUrl(QString::fromLatin1(kMinecraftProfileUrl)) };
+    Net::configure(request);
     request.setRawHeader("Authorization", "Bearer " + m_accessToken.toUtf8());
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
 

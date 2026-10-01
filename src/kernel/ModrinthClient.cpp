@@ -1,3 +1,4 @@
+#include "Net.h"
 #include "ModrinthClient.h"
 
 #include <QJsonArray>
@@ -92,6 +93,7 @@ void ModrinthClient::search(const QString &kind, const QString &query, const QSt
     url.setQuery(queryString);
 
     QNetworkRequest request(url);
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     // Modrinth 要求带可识别的 User-Agent

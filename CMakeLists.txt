@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 0.3.0
+    VERSION 0.3.1
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -63,6 +63,8 @@ qt_add_executable(mcl
     src/kernel/AccountManager.h
     src/kernel/InstanceStore.cpp
     src/kernel/InstanceStore.h
+    src/kernel/Net.cpp
+    src/kernel/Net.h
     src/kernel/Mirror.cpp
     src/kernel/Mirror.h
     src/kernel/ModLoader.cpp

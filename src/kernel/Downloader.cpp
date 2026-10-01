@@ -1,3 +1,4 @@
+#include "Net.h"
 #include "Downloader.h"
 
 #include <QCryptographicHash>
@@ -300,6 +301,7 @@ void Downloader::taskVerified(quint64 generation, int index, bool upToDate)
     const QString effectiveUrl = useFallback ? item.fallbackUrl : item.url;
 
     QNetworkRequest request{ QUrl(effectiveUrl) };
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));

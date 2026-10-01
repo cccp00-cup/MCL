@@ -373,6 +373,25 @@ Windows 的 zlib 走 `FetchContent` 拉源码（那边没有系统 zlib，Qt 也
 阶段跑 `windeployqt`，把 Qt 的 dll 和 QML 插件收进安装目录 —— 不跑这个，用户双击就是
 "缺少 Qt6Core.dll"。
 
+**HTTP/2 会让请求悬死（卡在"查询 Forge 的版本"）**：
+
+Qt 默认会尝试协商 HTTP/2。Mojang 的 CDN、BMCLAPI、Forge/NeoForge 的 maven
+（以及中间的网络设备）并不都认它，协商失败时报：
+
+```
+qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
+```
+
+**要命的不是报错，而是之后请求会悬在那里不返回** —— 既不成功也不失败，
+于是界面卡在某个阶段一动不动。因为不是明确的连接错误，`Downloader` 的重试
+和停滞检测都够不着它。
+
+修法是所有出网请求统一走 `Net::configure()`（`src/kernel/Net.h`），里面就两件事：
+关掉 `Http2AllowedAttribute`、统一 User-Agent。改完全流程再没有一条 http2 报错。
+
+> 教训：Qt 的默认值不一定适配国内的网络环境。"连接卡住不报错"这类症状，
+> 先怀疑协议协商，而不是网络慢。
+
 **市场筛选**：两个坑，都是"看着能用其实没用"的那种。
 
 1. **`versions:` 是废弃的 facet 名**。Modrinth 现在叫 **`game_versions`**，传旧名字会被

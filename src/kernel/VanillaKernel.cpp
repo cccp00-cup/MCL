@@ -1,3 +1,4 @@
+#include "Net.h"
 #include "VanillaKernel.h"
 
 #include "Downloader.h"
@@ -74,6 +75,7 @@ VanillaKernel::VanillaKernel(InstanceStore *store, AccountManager *account, QObj
 void VanillaKernel::prefetchManifest()
 {
     QNetworkRequest request{ QUrl(Mirror::rewrite(QString::fromLatin1(kManifestUrl))) };
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
@@ -308,6 +310,7 @@ QString mirrorModrinthFile(const QString &url)
 QNetworkRequest modrinthRequest(const QString &url)
 {
     QNetworkRequest request{ QUrl(url) };
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader,
@@ -614,6 +617,7 @@ void VanillaKernel::checkContentUpdates(const QString &instanceId)
     body[QStringLiteral("algorithm")] = QStringLiteral("sha1");
 
     QNetworkRequest request{ QUrl(modrinthBase() + QStringLiteral("/version_files/update")) };
+    Net::configure(request);
     request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QStringLiteral("mcl/0.1 (github.com/cccp00-cup/mcl)"));
@@ -956,6 +960,7 @@ void VanillaKernel::fetchLoaderMetadata()
     setStage(QStringLiteral("查询 %1 的版本").arg(ModLoader::displayName(kind)));
 
     QNetworkRequest request{ QUrl(ModLoader::metadataUrl(kind)) };
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
@@ -1113,6 +1118,7 @@ QString fabricProfileUrl(const QString &gameVersion, const QString &loaderVersio
 QNetworkRequest fabricRequest(const QString &url)
 {
     QNetworkRequest request{ QUrl(url) };
+    Net::configure(request);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("mcl/0.1"));
