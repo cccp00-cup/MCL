@@ -385,14 +385,18 @@ Windows 的 zlib 走 `FetchContent` 拉源码（那边没有系统 zlib，Qt 也
    Linux 下 shell 会等，所以这个坑只在 Windows 暴露。
 4. **`CPackConfig.cmake` 自己也是 CMake 脚本，会被再解析一次**。NSIS 快捷方式里的反斜杠
    得写 **4 个**，只写 2 个的话第一次解析后剩单个，第二次就把 `\m` 当成非法转义。
-5. **`FetchContent` 拉来的子项目会把自己的 `install()` 塞进包里**。zlib 的 install 规则
+5. **Windows 上别用 `QT_QPA_PLATFORM=offscreen` 截图** —— Qt 的 offscreen 插件在那边
+   拿不到系统字体数据库，界面文字全变成空心方框（豆腐块）。Linux 的 offscreen 走
+   fontconfig，所以从没暴露过。runner 上有真实桌面会话（字体也很齐全，微软雅黑、
+   宋体都在），直接用默认平台开窗口即可。
+6. **`FetchContent` 拉来的子项目会把自己的 `install()` 塞进包里**。zlib 的 install 规则
    让 CPack 去打 `zlib-build/cmake_install.cmake` 然后报错。开关名是 zlib 沿用 CMake 约定的
    **`SKIP_INSTALL_ALL`**（我一开始猜的 `ZLIB_INSTALL` 根本不存在，改了没用）。
 
 **Windows 支持现状**：平台相关的地方基本都写到了（classpath 分隔符、`java.exe`、
 注册表读壁纸、`WIN32_EXECUTABLE`、`rename` 前先 `remove`、rules 里的 Windows natives、
 install/CPack 规则限在 `if(UNIX AND NOT APPLE)`），全树没有 POSIX-only 调用、
-没有硬编码家目录。**已经在真 Windows 上跑通**（2026-10-01，CI run 36842236567）：
+没有硬编码家目录。**已经在真 Windows 上跑通**（2026-10-01，CI run 36844523026）：
 配置 / 编译 / 离屏冒烟 / `mcl.log` 落盘 / NSIS 打包全绿，产物 `mcl-0.1.0-win64.exe`（21M）
 和 `smoke.png`（1280x800，说明 QML 真的加载起来并渲染出来了）。
 启动后画的内容和 Linux 一致：菜单栏、Dock、玻璃、以及默认打开的「启动器」窗口。
