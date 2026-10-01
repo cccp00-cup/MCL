@@ -405,6 +405,18 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**QML 动态创建的组件：id 可见，属性不可见**：
+
+`About` 窗口要做成苹果那种磨砂玻璃，需要按**窗口在桌面上的坐标**去取壁纸切片，
+于是得访问 McWindow 的 `posX` / `workArea`。直接写 `desktopWidth` 会
+`ReferenceError: desktopWidth is not defined`。
+
+原因是 QML 的作用域规则：`Loader.sourceComponent` 创建的组件**继承创建点的
+`id` 作用域**（所以 `win` 能用），但**看不到那边的属性**（所以 `desktopWidth`
+不行）。要么带上 id 前缀（`win.workArea.width`），要么由父组件显式注入。
+
+> 排查提示：报错里**只有属性名、没有 id 名**，就说明 id 其实能访问到 —— 加前缀即可。
+
 **`Component.onCompleted` 的时机陷阱（详情页永远是空的）**：
 
 详情页最初在 `Component.onCompleted` 里发请求拉版本列表。但 QML 里

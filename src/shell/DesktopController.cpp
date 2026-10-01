@@ -234,7 +234,16 @@ void DesktopController::openApp(const QString &appId)
 
     const qreal step = kCascadeStep * (m_cascade % kCascadeWrap);
     ++m_cascade;
-    const QRectF geometry(kBaseX + step, kBaseY + step, kDefaultW, kDefaultH);
+
+    // 「关于本机」是苹果那种小长方形对话框，不跟其它应用共用尺寸
+    qreal w = kDefaultW;
+    qreal h = kDefaultH;
+    if (appId == QLatin1String("about")) {
+        w = 470;
+        h = 300;
+    }
+
+    const QRectF geometry(kBaseX + step, kBaseY + step, w, h);
     m_windows->addWindow(appId, title, geometry);
 
     if (!m_running.contains(appId)) {
