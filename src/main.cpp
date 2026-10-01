@@ -51,13 +51,20 @@ int main(int argc, char *argv[])
     // Windows 上没有控制台，日志得落文件；其它平台这里什么都不做
     Log::install();
 
+    // 报一下有没有编进内置浏览器 —— CI 的冒烟靠这行判断 WebEngine 是否真的可用
+#ifdef MCL_HAS_BROWSER
+    Log::line(QStringLiteral("[mcl] 内置浏览器: 有"));
+#else
+    Log::line(QStringLiteral("[mcl] 内置浏览器: 无（没找到 QtWebEngine）"));
+#endif
+
     // 任务栏 / 标题栏图标。Linux 下由 .desktop 负责，这里主要是给 Windows 用。
     app.setWindowIcon(QIcon(QStringLiteral("qrc:/mcl/icons/png/mcl-256.png")));
     app.setApplicationName(QStringLiteral("mcl"));
     app.setApplicationDisplayName(QStringLiteral("mcl"));
     // 不设 organizationName：否则 QStandardPaths::AppConfigLocation 会变成
     // ~/.config/mcl/mcl（org/app 各一层），配置目录凭空多一层。
-    app.setApplicationVersion(QStringLiteral("0.8.0"));
+    app.setApplicationVersion(QStringLiteral("0.8.1"));
     app.setDesktopFileName(QStringLiteral("mcl"));
 
     // 界面全部自绘，不依赖任何平台控件样式

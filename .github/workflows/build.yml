@@ -33,6 +33,9 @@ jobs:
           # 用 MSVC 而不是 mingw：runner 自带 MSVC 工具链，
           # 省掉"CMake 挑错编译器去链 mingw 版 Qt"这类麻烦
           arch: win64_msvc2022_64
+          # WebEngine 不在 Qt 的基础包里，必须显式点名 ——
+          # 不装的话 find_package 找不到，内置浏览器会被静默跳过
+          modules: 'qtwebengine'
           cache: true
 
       - name: 配置
@@ -74,10 +77,16 @@ jobs:
           $env:QTWEBENGINE_CHROMIUM_FLAGS = "--no-sandbox --disable-gpu"
           Start-Process -FilePath ".\build\Release\mcl.exe" `
                         -ArgumentList "--open", "browser", "--shot", "browser.png" -Wait
-          if (-not (Test-Path browser.png)) {
-            throw "浏览器窗口没出图 —— 检查 QtWebEngine"
+          # 光看有没有出图不算数 —— 没编进 WebEngine 时它只是开了个空窗口。
+          # 要确认程序自己报的是"有"。
+          $out = & ".\build\Release\mcl.exe" --open browser 2>&1 | Out-String
+          if ($out -notmatch "内置浏览器: 有") {
+            throw "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"
           }
-          Write-Host "浏览器窗口渲染成功"
+          if (-not (Test-Path browser.png)) {
+            throw "浏览器窗口没出图"
+          }
+          Write-Host "内置浏览器可用"
 
       - name: 看看系统有哪些字体
         if: always()
@@ -148,6 +157,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.2'
+          modules: 'qtwebengine'
           cache: true
 
       - name: 配置
@@ -169,9 +179,10 @@ jobs:
         run: |
           # WebEngine 在离屏下要关掉沙箱，CI 容器里没有所需的权限
           QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" \
-            ./build/mcl --open browser --shot browser.png || true
-          test -s browser.png || { echo "浏览器窗口没出图 —— 检查 QtWebEngine 依赖"; exit 1; }
-          echo "浏览器窗口渲染成功"
+            ./build/mcl --open browser --shot browser.png 2>&1 | tee /dev/stderr | grep -q "内置浏览器: 有" \
+            || { echo "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"; exit 1; }
+          test -s browser.png || { echo "浏览器窗口没出图"; exit 1; }
+          echo "内置浏览器可用"
 
       - name: 打 deb
         run: |
