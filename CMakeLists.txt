@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 0.7.0
+    VERSION 0.8.0
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -12,6 +12,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 6.5 REQUIRED COMPONENTS
     Core Gui Qml Quick QuickControls2 Network
 )
+
+# WebEngine（内置浏览器）是**可选**的：有就编进去，没有就静默跳过。
+#
+# 做成可选是因为开发机上不一定装得到 qt6-webengine-dev（它不在 Qt 的基础包里），
+# 而没有它也不该让整个项目编不过 —— 只是 Dock 里少一个浏览器图标而已。
+find_package(Qt6 QUIET COMPONENTS WebEngineQuick)
+if(Qt6WebEngineQuick_FOUND)
+    message(STATUS "找到 QtWebEngine —— 内置浏览器会编进来")
+else()
+    message(STATUS "没找到 QtWebEngine —— 跳过内置浏览器（装 qt6-webengine-dev 可启用）")
+endif()
 
 # zlib 只有 ZipExtract 用（解压 natives 和 installer）。
 # Windows 上没有系统 zlib，Qt 也不对外导出它自带的那个，所以那边拉一份源码来编；
@@ -99,6 +110,12 @@ target_link_libraries(mcl PRIVATE
     ${MCL_ZLIB_TARGET}
 )
 
+if(Qt6WebEngineQuick_FOUND)
+    target_link_libraries(mcl PRIVATE Qt6::WebEngineQuick)
+    # 界面侧据此决定 Dock 里放不放浏览器图标
+    target_compile_definitions(mcl PRIVATE MCL_HAS_BROWSER)
+endif()
+
 # ---------------------------------------------------------------- QML 模块
 # 源文件放在 qml/ 下保持目录整洁，但用 QT_RESOURCE_ALIAS 摊平到模块根，
 # 这样 main.cpp 的 loadFromModule("Mcl", "Desktop") 才能找到 Desktop.qml。
@@ -162,6 +179,11 @@ qt_add_resources(mcl "mcl_icons"
         icons/fabric.svg
         icons/palette.svg
         icons/sparkle.svg
+        icons/browser.svg
+        # 内置浏览器单独走 resources，不进 QML_FILES：
+        # 它 import 了 QtWebEngine，而 qt_add_qml_module 会扫描 QML 的 import
+        # 并据此去找对应插件；没装 qt6-webengine-dev 的环境会因此直接配置失败。
+        qml/AppBrowser.qml
         assets/background.jpg
         assets/apple-logo.png
         icons/png/mcl-256.png
@@ -249,6 +271,13 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
         "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, libqt6svg6")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+    # 内置浏览器的运行时依赖。只有真把它编进去了才声明 ——
+    # 否则用户会白装一个上百 MB 的 WebEngine。
+    if(Qt6WebEngineQuick_FOUND)
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS
+            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libqt6webengine6")
+    endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/postinst")
         set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA

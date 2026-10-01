@@ -405,6 +405,27 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**内置浏览器是可选依赖**：用 `QtWebEngineQuick`（Chromium 内核），但**做成可选** ——
+`find_package(Qt6 QUIET COMPONENTS WebEngineQuick)`，有就编进 Dock，没有就静默跳过。
+
+这么做是因为 `qt6-webengine-dev` 不在 Qt 的基础包里，开发机上不一定装得到；
+没有它不该让整个项目编不过，只是少一个浏览器图标。`main.cpp` 里
+`QtWebEngineQuick::initialize()` 也包在 `#ifdef MCL_HAS_BROWSER` 里，
+且**必须在 `QGuiApplication` 之前调用**。
+
+**两个坑**：
+
+1. **`qt_add_qml_module` 会扫描 QML 的 import 并据此找插件**。`AppBrowser.qml`
+   里 `import QtWebEngine` 会让 CMake 去找 `Qt6::qtwebenginequickplugin`，
+   没装的环境直接配置报错。所以这个文件**不能放进 `QML_FILES`**，
+   改走 `RESOURCES`，用字符串 `source` 惰性加载（缺点只是少一层 qmlcachegen）。
+2. **QML 的 JS 不支持在三元表达式里放 `{}` block**。`Loader.sourceComponent`
+   那行要用三元区分浏览器（它必须走字符串 source），所以把 switch 抽成了
+   `componentFor(app)` 函数。
+
+> 本地没装 dev 包时 CMake 会打印一句 "is a dependency of 'mcl'" 的**警告**，
+> 但那只是警告，构建照常通过。
+
 **无标题栏的窗口（`McWindow.chromeless`）**：「关于本机」要做成苹果那种
 没有标题栏的小卡片，所以 McWindow 加了这个开关 —— 标题栏和分隔线高度归零、
 窗口底色改成透明（内容自己画玻璃）、内容从窗口顶部开始。

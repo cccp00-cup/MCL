@@ -66,6 +66,19 @@ jobs:
           }
           Write-Host "截图 $((Get-Item smoke.png).Length) 字节"
 
+      - name: 冒烟 —— 内置浏览器能否加载
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          # 离屏下 Chromium 起不来沙箱，CI 里没那个权限
+          $env:QTWEBENGINE_CHROMIUM_FLAGS = "--no-sandbox --disable-gpu"
+          Start-Process -FilePath ".\build\Release\mcl.exe" `
+                        -ArgumentList "--open", "browser", "--shot", "browser.png" -Wait
+          if (-not (Test-Path browser.png)) {
+            throw "浏览器窗口没出图 —— 检查 QtWebEngine"
+          }
+          Write-Host "浏览器窗口渲染成功"
+
       - name: 看看系统有哪些字体
         if: always()
         shell: pwsh
@@ -127,7 +140,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential ninja-build zlib1g-dev libgl1-mesa-dev
+            build-essential ninja-build zlib1g-dev libgl1-mesa-dev \
+            libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
+            libasound2t64 libxkbfile1 libminizip1 libwebpmux3 libxkbcommon-x11-0
 
       - name: 装 Qt
         uses: jurplel/install-qt-action@v4
@@ -147,6 +162,16 @@ jobs:
         run: |
           ./build/mcl --shot smoke.png
           test -s smoke.png || { echo "没出图"; exit 1; }
+
+      - name: 冒烟 —— 内置浏览器能否加载
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # WebEngine 在离屏下要关掉沙箱，CI 容器里没有所需的权限
+          QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" \
+            ./build/mcl --open browser --shot browser.png || true
+          test -s browser.png || { echo "浏览器窗口没出图 —— 检查 QtWebEngine 依赖"; exit 1; }
+          echo "浏览器窗口渲染成功"
 
       - name: 打 deb
         run: |

@@ -34,6 +34,27 @@ Item {
                                       || resizeBottom.active
     signal geometryCommitted(real x, real y, real w, real h)
 
+    // 各应用的内容组件。写成函数而不是内联 switch，是因为 Loader.sourceComponent
+    // 那行得用三元表达式区分浏览器（它必须走字符串 source），而 QML 的 JS
+    // 不支持在三元里直接放 {} block。
+    function componentFor(appId) {
+        switch (appId) {
+        case "launcher":  return compLauncher
+        case "mods":      return compModMarket
+        case "packs":     return compPackMarket
+        case "resources": return compResourceMarket
+        case "shaders":   return compShaderMarket
+        case "instanceSettings": return compInstanceSettings
+        case "console":   return compConsole
+        case "settings":  return compSettings
+        case "about":     return compAbout
+        case "account":   return compAccount
+        case "newInstance": return compNewInstance
+        case "intro":     return compIntro
+        default:          return compPlaceholder
+        }
+    }
+
     x: posX
     y: posY
     opacity: isMinimized ? 0 : reveal
@@ -262,29 +283,23 @@ Item {
         }
 
         // —— 内容
+        //
+        // 浏览器**单独走字符串 source**：AppBrowser.qml 里 import 了 QtWebEngine，
+        // 而没有那个模块的环境（没装 qt6-webengine-dev）连 `Component { AppBrowser {} }`
+        // 这种声明都会在编译期报 "module QtWebEngine is not installed"。
+        // 用字符串就只在实际打开浏览器时才去加载它。
         Loader {
             id: content
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: win.chromeless ? parent.top : titleSeparator.bottom
             anchors.bottom: parent.bottom
-            sourceComponent: {
-                switch (win.app) {
-                case "launcher":  return compLauncher
-                case "mods":      return compModMarket
-                case "packs":     return compPackMarket
-                case "resources": return compResourceMarket
-                case "shaders":   return compShaderMarket
-                case "instanceSettings": return compInstanceSettings
-                case "console":   return compConsole
-                case "settings":  return compSettings
-                case "about":     return compAbout
-                case "account":   return compAccount
-                case "newInstance": return compNewInstance
-                case "intro":     return compIntro
-                default:          return compPlaceholder
-                }
-            }
+
+            source: (win.app === "browser" && hasBrowser) ? browserUrl : ""
+            sourceComponent: (win.app === "browser") ? null : componentFor(win.app)
+
+            // 浏览器走 RESOURCES 那条 qrc 路径，不是 qrc:/qt/qml —— 见 CMakeLists
+            readonly property string browserUrl: "qrc:/mcl/qml/AppBrowser.qml"
         }
 
         // —— 缩放热区

@@ -65,6 +65,12 @@ void DesktopController::rebuildApps()
              QStringLiteral("#c26a3a"), QStringLiteral("app")),
         make(QStringLiteral("resources"), QStringLiteral("资源包市场"), iconPath("palette"),
              QStringLiteral("#4a9e8f"), QStringLiteral("app")),
+#ifdef MCL_HAS_BROWSER
+        // 内置浏览器。没编进 WebEngine 时这个图标就不出现 ——
+        // 免得点了开出一个空白窗口。
+        make(QStringLiteral("browser"), QStringLiteral("浏览器"), iconPath("browser"),
+             QStringLiteral("#3a7bd5"), QStringLiteral("app")),
+#endif
         make(QStringLiteral("shaders"), QStringLiteral("光影市场"), iconPath("sparkle"),
              QStringLiteral("#8a5ec8"), QStringLiteral("app")),
         make(QStringLiteral("console"), QStringLiteral("控制台"), iconPath("terminal"),

@@ -15,6 +15,10 @@
 #include "kernel/ModrinthClient.h"
 #include "kernel/VanillaKernel.h"
 #include "Log.h"
+
+#ifdef MCL_HAS_BROWSER
+#include <QtWebEngineQuick/QtWebEngineQuick>
+#endif
 #include "shell/DesktopController.h"
 #include "shell/GlassProvider.h"
 #include "shell/ShellSettings.h"
@@ -37,6 +41,11 @@ QString optionValue(const QStringList &args, const QString &name)
 
 int main(int argc, char *argv[])
 {
+#ifdef MCL_HAS_BROWSER
+    // WebEngine 必须在 QGuiApplication 之前初始化，且只能初始化一次
+    QtWebEngineQuick::initialize();
+#endif
+
     QGuiApplication app(argc, argv);
 
     // Windows 上没有控制台，日志得落文件；其它平台这里什么都不做
@@ -48,7 +57,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("mcl"));
     // 不设 organizationName：否则 QStandardPaths::AppConfigLocation 会变成
     // ~/.config/mcl/mcl（org/app 各一层），配置目录凭空多一层。
-    app.setApplicationVersion(QStringLiteral("0.7.0"));
+    app.setApplicationVersion(QStringLiteral("0.8.0"));
     app.setDesktopFileName(QStringLiteral("mcl"));
 
     // 界面全部自绘，不依赖任何平台控件样式
@@ -105,6 +114,11 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("packMarket"), &packMarket);
     engine.rootContext()->setContextProperty(QStringLiteral("resourceMarket"), &resourceMarket);
     engine.rootContext()->setContextProperty(QStringLiteral("shaderMarket"), &shaderMarket);
+#ifdef MCL_HAS_BROWSER
+    engine.rootContext()->setContextProperty(QStringLiteral("hasBrowser"), true);
+#else
+    engine.rootContext()->setContextProperty(QStringLiteral("hasBrowser"), false);
+#endif
     engine.rootContext()->setContextProperty(QStringLiteral("windowedMode"),
                                              args.contains(QStringLiteral("--windowed")));
     // 演示模式：一次打开多个窗口，便于截图与观察窗口层级
