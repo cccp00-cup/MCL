@@ -278,11 +278,13 @@ if(WIN32)
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/mcl.ico")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
 
-    # 开始菜单快捷方式
+    # 开始菜单快捷方式。
+    # 反斜杠要写 4 个：CPackConfig.cmake 自己也是 CMake 脚本，会被再解析一次，
+    # 所以值里必须留下成对的反斜杠，否则第二次解析会把 \m 当成非法转义。
     set(CPACK_NSIS_CREATE_ICONS_EXTRA
-        "CreateShortCut '$SMPROGRAMS\\$STARTMENU_FOLDER\\mcl.lnk' '$INSTDIR\\mcl.exe'")
+        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\mcl.lnk' '$INSTDIR\\\\mcl.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
-        "Delete '$SMPROGRAMS\\$STARTMENU_FOLDER\\mcl.lnk'")
+        "Delete '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\mcl.lnk'")
 
     include(CPack)
 endif()
