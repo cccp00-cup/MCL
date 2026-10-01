@@ -12,6 +12,10 @@ Item {
     property string loaderFilter: ""
     signal installRequested(var project)
 
+    // 外面改了筛选（例如从实例设置进来时预填了该实例的 MC 版本），
+    // 把输入框同步过来。用户自己打字时不会走到这儿 —— 那时 versionFilter 还没变。
+    onVersionFilterChanged: versionInput.text = view.versionFilter
+
     // 安装进度（0~1）。内核的阶段和进度都推过来，这里存一份给进度条绑定。
     property real progress: 0
     readonly property string stage: kernel.currentStage
@@ -139,10 +143,80 @@ Item {
             signal menuRequested()
         }
 
-        FilterChip {
-            label: view.versionFilter === "" ? qsTr("版本：不限") : qsTr("版本：%1").arg(view.versionFilter)
-            value: view.versionFilter
-            onMenuRequested: versionMenu.open()
+        // 版本：**可以直接手输**，也可以点右边的小箭头从版本清单里挑。
+        //
+        // 以前这里是个只能选的 chip，而菜单只列了前 10 个版本 —— 想筛到
+        // 1.20.1 之外的版本基本没戏。版本号本来就该让人自己打。
+        Rectangle {
+            id: versionField
+            width: 124
+            height: 24
+            radius: 6
+            color: versionInput.text.trim() !== ""
+                   ? Qt.rgba(0.04, 0.52, 1.0, 0.18)
+                   : (versionHover.containsMouse ? Theme.hoverFill : Qt.rgba(0, 0, 0, 0.04))
+            border.width: 1
+            border.color: versionInput.text.trim() !== "" ? Theme.accent : Theme.separator
+
+            // 回车或失焦时提交。**不能**用 text 绑定 view.versionFilter ——
+            // 赋值会打断绑定，之后外部再改就同步不回来了。
+            function commit() {
+                const v = versionInput.text.trim()
+                if (v === view.versionFilter)
+                    return
+                view.versionFilter = v
+                view.search(query.text)
+            }
+
+            TextInput {
+                id: versionInput
+                anchors.left: parent.left
+                anchors.right: dropdownArrow.left
+                anchors.leftMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                verticalAlignment: TextInput.AlignVCenter
+                font.pixelSize: 11
+                color: Theme.textPrimary
+                selectionColor: Theme.accent
+                selectedTextColor: "#ffffff"
+                clip: true
+                inputMethodHints: Qt.ImhNoPredictiveText
+                onAccepted: versionField.commit()
+                onActiveFocusChanged: if (!activeFocus) versionField.commit()
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("版本（可输入）")
+                    font.pixelSize: 11
+                    color: Theme.textTertiary
+                    visible: versionInput.text === "" && !versionInput.activeFocus
+                }
+            }
+
+            Text {
+                id: dropdownArrow
+                anchors.right: parent.right
+                anchors.rightMargin: 7
+                anchors.verticalCenter: parent.verticalCenter
+                text: "⌄"
+                font.pixelSize: 11
+                color: Theme.textTertiary
+
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -7
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: versionMenu.open()
+                }
+            }
+
+            // 只负责悬浮高亮，不接点击（TextInput 得能拿到焦点）
+            MouseArea {
+                id: versionHover
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+            }
         }
 
         FilterChip {
@@ -157,7 +231,9 @@ Item {
             entries: {
                 const out = [{ text: qsTr("不限"), action: "" }]
                 const list = kernel.availableVersions
-                for (let i = 0; i < list.length && i < 10; ++i)
+                // 清单有九百多条，全塞进菜单不现实；列前 40 个覆盖常用版本，
+                // 其余的让用户直接在输入框里打。
+                for (let i = 0; i < list.length && i < 40; ++i)
                     out.push({ text: list[i].name, action: list[i].id })
                 return out
             }

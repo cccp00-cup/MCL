@@ -7,7 +7,25 @@ Item {
     // 窗口关掉就解绑 —— 免得以后从 Dock 直接进来时还装着上次那个实例
     Component.onDestruction: modMarket.targetInstance = ""
 
+    // 从「实例设置」进来时，默认就按那个实例的 MC 版本筛。
+    // 不这么做的话列表里会混着一堆别的版本的模组 —— 看着能装，装完起不来。
+    // （筛选本身是 Modrinth 那边做的，见 ModrinthClient 的 game_versions facet。）
+    Component.onCompleted: marketView.versionFilter = root.instanceVersion()
+
+    // 没绑实例（从 Dock 直接进来的）就返回空 = 不限
+    function instanceVersion() {
+        if (modMarket.targetInstance === "")
+            return ""
+        const list = kernel.instances
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].id === modMarket.targetInstance)
+                return list[i].versionId
+        }
+        return ""
+    }
+
     MarketView {
+        id: marketView
         anchors.fill: parent
         client: modMarket
         kind: "mod"

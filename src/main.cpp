@@ -180,6 +180,17 @@ int main(int argc, char *argv[])
         });
     }
 
+    // --mods <实例 id>：按某个实例打开模组市场（调试用）。
+    // 走的是和「实例设置 → 添加模组…」同一条路：先绑实例再开窗口，
+    // 所以市场会照该实例的 MC 版本预填筛选。
+    const QString modsId = optionValue(args, QStringLiteral("--mods"));
+    if (!modsId.isEmpty()) {
+        QTimer::singleShot(500, &desktop, [&desktop, &modMarket, modsId]() {
+            modMarket.setTargetInstance(modsId);
+            desktop.openApp(QStringLiteral("mods"));
+        });
+    }
+
     // --open <应用 id>：启动后直接打开某个应用窗口（调试/截图用）
     const QString openApp = optionValue(args, QStringLiteral("--open"));
     if (!openApp.isEmpty()) {

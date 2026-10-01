@@ -373,6 +373,22 @@ Windows 的 zlib 走 `FetchContent` 拉源码（那边没有系统 zlib，Qt 也
 阶段跑 `windeployqt`，把 Qt 的 dll 和 QML 插件收进安装目录 —— 不跑这个，用户双击就是
 "缺少 Qt6Core.dll"。
 
+**市场筛选**：两个坑，都是"看着能用其实没用"的那种。
+
+1. **`versions:` 是废弃的 facet 名**。Modrinth 现在叫 **`game_versions`**，传旧名字会被
+   **静默忽略** —— 不报错，只是筛选不生效，于是列表里混进一堆不支持当前版本的模组，
+   装了也起不来。这个特别阴，因为 API 照样返回 200 和一堆结果。
+   验证手段是拿一个**不存在的版本**去试：`game_versions:0.0.0` 返回 0 条，
+   说明过滤真的在起作用；如果返回几千条，就是名字写错了。
+   加载器同理，用 `loaders:` 而不是 `categories:`（后者是个大杂烩）。
+2. **版本筛选默认是"不限"**，从实例进市场时也没有按该实例的 MC 版本预填。
+   现在 `AppModMarket` 会在 `Component.onCompleted` 里读实例的 `versionId` 填进去。
+   从 Dock 直接进（没绑实例）才是不限。
+
+版本筛选做成了**可输入**的：以前是个只能选的 chip，而菜单只列了前 10 个版本，
+想筛到别的版本基本没戏。现在是输入框 + 下拉箭头，回车或失焦时提交。
+`ModrinthClient::search` 会把实际发出去的 facets 打进日志，筛选一旦失效能立刻定位。
+
 **CI 修了五轮才全绿**，五个坑都是 Windows/CI 特有的，记在这儿省得再踩：
 
 1. **generator 名字不能写死**。最初写 `-G "Visual Studio 17 2022"`，在 `windows-latest`

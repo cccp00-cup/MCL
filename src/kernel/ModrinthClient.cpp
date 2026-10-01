@@ -55,14 +55,18 @@ void ModrinthClient::setTargetInstance(const QString &instanceId)
 void ModrinthClient::search(const QString &kind, const QString &query, const QString &gameVersion,
                             const QString &loader)
 {
-    // facets 是 Modrinth 的过滤语法：[[ "project_type:mod" ], [ "versions:1.20.1" ]]
+    // facets 是 Modrinth 的过滤语法：[[ "project_type:mod" ], [ "game_versions:1.20.1" ]]
+    //
+    // 版本这一项**必须**叫 game_versions —— `versions` 是旧版 API 的名字，
+    // 现在传过去会被静默忽略，结果是列表里混进一堆不支持当前版本的模组，
+    // 装了也起不来。（实测 game_versions:0.0.0 返回 0 条，确认过滤真的生效。）
     QJsonArray facets;
     facets.append(QJsonArray{ QStringLiteral("project_type:%1").arg(kind) });
     if (!gameVersion.isEmpty())
-        facets.append(QJsonArray{ QStringLiteral("versions:%1").arg(gameVersion) });
-    // Modrinth 把加载器也归在 categories 里（fabric / forge / neoforge / quilt）
+        facets.append(QJsonArray{ QStringLiteral("game_versions:%1").arg(gameVersion) });
+    // 加载器用 loaders —— 比 categories 准确（后者是个大杂烩，还混着玩法标签）
     if (!loader.isEmpty())
-        facets.append(QJsonArray{ QStringLiteral("categories:%1").arg(loader) });
+        facets.append(QJsonArray{ QStringLiteral("loaders:%1").arg(loader) });
 
     QUrlQuery queryString;
     if (!query.trimmed().isEmpty()) {
@@ -73,8 +77,16 @@ void ModrinthClient::search(const QString &kind, const QString &query, const QSt
     }
     queryString.addQueryItem(QStringLiteral("limit"), QStringLiteral("24"));
     queryString.addQueryItem(QStringLiteral("index"), QStringLiteral("downloads"));
-    queryString.addQueryItem(QStringLiteral("facets"),
-                             QString::fromUtf8(QJsonDocument(facets).toJson(QJsonDocument::Compact)));
+    const QByteArray facetsJson = QJsonDocument(facets).toJson(QJsonDocument::Compact);
+    queryString.addQueryItem(QStringLiteral("facets"), QString::fromUtf8(facetsJson));
+
+    // 把实际发出去的过滤条件记一笔。筛选一旦静默失效，用户只会看到
+    // "列表里怎么全是不支持我这个版本的模组"，而日志能直接定位到原因。
+    qInfo("[mcl] 市场搜索 kind=%s 版本=%s 加载器=%s facets=%s",
+          qPrintable(kind),
+          qPrintable(gameVersion.isEmpty() ? QStringLiteral("不限") : gameVersion),
+          qPrintable(loader.isEmpty() ? QStringLiteral("不限") : loader),
+          facetsJson.constData());
 
     QUrl url(baseUrl() + QStringLiteral("/search"));
     url.setQuery(queryString);
