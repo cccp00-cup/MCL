@@ -373,12 +373,33 @@ Windows 的 zlib 走 `FetchContent` 拉源码（那边没有系统 zlib，Qt 也
 阶段跑 `windeployqt`，把 Qt 的 dll 和 QML 插件收进安装目录 —— 不跑这个，用户双击就是
 "缺少 Qt6Core.dll"。
 
+**CI 修了五轮才全绿**，五个坑都是 Windows/CI 特有的，记在这儿省得再踩：
+
+1. **generator 名字不能写死**。最初写 `-G "Visual Studio 17 2022"`，在 `windows-latest`
+   上直接报 `could not find any instance of Visual Studio` —— 镜像升级后预装的 VS 版本会变。
+   改成固定 `runs-on: windows-2022` + 让 CMake 自己挑 generator（只留 `-A x64`）。
+2. **Ubuntu 24.04 的 Qt 只有 6.4.2**，而 mcl 要求 6.5+，Linux job 的 `find_package` 必然失败。
+   两个平台统一改用 `install-qt-action` 装 6.8.2。
+3. **GUI 子系统程序 PowerShell 不等待**。`mcl.exe` 是 `WIN32_EXECUTABLE`，用 `& mcl.exe`
+   调用会**立刻返回**，脚本 0.3 秒后就去找截图，报「没出图」。必须 `Start-Process -Wait`。
+   Linux 下 shell 会等，所以这个坑只在 Windows 暴露。
+4. **`CPackConfig.cmake` 自己也是 CMake 脚本，会被再解析一次**。NSIS 快捷方式里的反斜杠
+   得写 **4 个**，只写 2 个的话第一次解析后剩单个，第二次就把 `\m` 当成非法转义。
+5. **`FetchContent` 拉来的子项目会把自己的 `install()` 塞进包里**。zlib 的 install 规则
+   让 CPack 去打 `zlib-build/cmake_install.cmake` 然后报错。开关名是 zlib 沿用 CMake 约定的
+   **`SKIP_INSTALL_ALL`**（我一开始猜的 `ZLIB_INSTALL` 根本不存在，改了没用）。
+
 **Windows 支持现状**：平台相关的地方基本都写到了（classpath 分隔符、`java.exe`、
 注册表读壁纸、`WIN32_EXECUTABLE`、`rename` 前先 `remove`、rules 里的 Windows natives、
 install/CPack 规则限在 `if(UNIX AND NOT APPLE)`），全树没有 POSIX-only 调用、
-没有硬编码家目录。**但从未在本机验证过 Windows 运行** —— 打包链路（NSIS + `windeployqt`）已经补上，
-交给 CI 的 windows job 去编译和冒烟。仍需实机确认的几处：260 字符路径上限、
-杀毒软件造成的文件占用、无边框窗口在 Windows 上的行为差异、高 DPI 下的自绘坐标。
+没有硬编码家目录。**已经在真 Windows 上跑通**（2026-10-01，CI run 36842236567）：
+配置 / 编译 / 离屏冒烟 / `mcl.log` 落盘 / NSIS 打包全绿，产物 `mcl-0.1.0-win64.exe`（21M）
+和 `smoke.png`（1280x800，说明 QML 真的加载起来并渲染出来了）。
+启动后画的内容和 Linux 一致：菜单栏、Dock、玻璃、以及默认打开的「启动器」窗口。
+
+仍需实机确认的几处（CI 的离屏渲染覆盖不到）：260 字符路径上限、
+杀毒软件造成的文件占用、无边框窗口在 Windows 上的行为差异（Aero Snap / 任务栏）、
+高 DPI 缩放下的自绘坐标。
 
 **尚未实现**：Quilt。当前是**离线/微软账户 +
 原版 / Fabric / Forge + 模组/整合包/资源包/光影四个市场**。
