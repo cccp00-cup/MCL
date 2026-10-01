@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("mcl"));
     // 不设 organizationName：否则 QStandardPaths::AppConfigLocation 会变成
     // ~/.config/mcl/mcl（org/app 各一层），配置目录凭空多一层。
-    app.setApplicationVersion(QStringLiteral("0.4.0"));
+    app.setApplicationVersion(QStringLiteral("0.4.1"));
     app.setDesktopFileName(QStringLiteral("mcl"));
 
     // 界面全部自绘，不依赖任何平台控件样式
@@ -187,6 +187,18 @@ int main(int argc, char *argv[])
     if (!modsId.isEmpty()) {
         QTimer::singleShot(500, &desktop, [&desktop, &modMarket, modsId]() {
             modMarket.setTargetInstance(modsId);
+            desktop.openApp(QStringLiteral("mods"));
+        });
+    }
+
+    // --detail <项目 id>：直接拉某个项目的版本列表并打开模组市场（调试用）。
+    // 详情页要靠点击才会打开，命令行下用它验证"版本列表接口真的能取到东西"。
+    const QString detailId = optionValue(args, QStringLiteral("--detail"));
+    if (!detailId.isEmpty()) {
+        QTimer::singleShot(500, &modMarket, [&modMarket, detailId]() {
+            modMarket.fetchVersions(detailId);
+        });
+        QTimer::singleShot(900, &desktop, [&desktop]() {
             desktop.openApp(QStringLiteral("mods"));
         });
     }

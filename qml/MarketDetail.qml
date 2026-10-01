@@ -24,8 +24,13 @@ Item {
     // 默认只看适配的 —— 免得列表里一堆点不了的
     property bool onlyMatching: true
 
-    // 进页面就拉版本列表
-    Component.onCompleted: {
+    // 进页面就拉版本列表。
+    //
+    // **不能**用 Component.onCompleted —— 这个组件在市场窗口一打开就被创建了
+    // （visible: false 也照样跑 onCompleted），那会儿 project 还是 null，
+    // 请求根本发不出去；等用户点卡片时 onCompleted 早已跑过，不会再执行。
+    // 结果就是详情页永远是空的。得盯着 project 本身变。
+    onProjectChanged: {
         if (client && project)
             client.fetchVersions(project.id)
     }

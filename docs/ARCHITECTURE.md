@@ -392,6 +392,19 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 > 教训：Qt 的默认值不一定适配国内的网络环境。"连接卡住不报错"这类症状，
 > 先怀疑协议协商，而不是网络慢。
 
+**`Component.onCompleted` 的时机陷阱（详情页永远是空的）**：
+
+详情页最初在 `Component.onCompleted` 里发请求拉版本列表。但 QML 里
+**`visible: false` 的组件照样会跑 `onCompleted`** —— 市场窗口一打开，详情页
+就被创建并跑完了，那会儿 `project` 还是 `null`，请求根本没发出去。
+等用户点卡片时 `onCompleted` 早就过了，于是详情页永远显示「没有可下载的版本」。
+
+凡是"被父组件提前创建、之后才拿到数据"的组件，都该**盯着那个属性变**
+（`onProjectChanged`），而不是用 `Component.onCompleted`。
+
+> 这个 bug 还有个副作用值得记：空状态文案把"没数据"和"没有匹配的版本"
+> 混在一起说，反而掩盖了真正的原因 —— 空状态该分开报。
+
 **装内容时挑版本**：`installContent` 原来取的是 `versions.first()` —— 而 Modrinth
 返回的版本列表**不保证**按"跟你的实例对得上"排。实测 Sodium 的第一个版本是
 `mc1.21-0.5.11`，1.20.1 的实例照它装就会装上 1.21 的构建，游戏直接起不来。

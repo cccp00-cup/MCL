@@ -42,6 +42,8 @@ void ModrinthClient::fetchVersions(const QString &projectId)
     if (projectId.isEmpty())
         return;
 
+    qInfo("[mcl] 取版本列表 project=%s", qPrintable(projectId));
+
     m_projectVersions.clear();
     Q_EMIT projectVersionsChanged();
     m_versionsLoading = true;
@@ -53,7 +55,7 @@ void ModrinthClient::fetchVersions(const QString &projectId)
     Net::configure(request);
 
     QNetworkReply *reply = m_net->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, projectId]() {
         reply->deleteLater();
         m_versionsLoading = false;
         Q_EMIT versionsLoadingChanged();
@@ -115,6 +117,7 @@ void ModrinthClient::fetchVersions(const QString &projectId)
             out << item;
         }
 
+        qInfo("[mcl] project=%s 拿到 %d 个可下载版本", qPrintable(projectId), int(out.size()));
         m_projectVersions = out;
         Q_EMIT projectVersionsChanged();
     });
