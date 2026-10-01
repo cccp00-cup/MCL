@@ -242,6 +242,7 @@ Item {
                 case "about":     return compAbout
                 case "account":   return compAccount
                 case "newInstance": return compNewInstance
+                case "intro":     return compIntro
                 default:          return compPlaceholder
                 }
             }
@@ -373,6 +374,7 @@ Item {
     Component { id: compAbout; AppAbout {} }
     Component { id: compAccount; AppAccount {} }
     Component { id: compNewInstance; AppNewInstance {} }
+    Component { id: compIntro; AppIntro {} }
 
     Component {
         id: compPlaceholder

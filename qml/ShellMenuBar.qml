@@ -17,6 +17,7 @@ Item {
     function handleMenuAction(action) {
         switch (action) {
         case "about":      desktop.openApp("about"); break
+        case "intro":      desktop.openApp("intro"); break
         case "settings":   desktop.openApp("settings"); break
         case "launcher":   desktop.openApp("launcher"); break
         case "console":    desktop.openApp("console"); break
@@ -168,7 +169,7 @@ Item {
                       { text: qsTr("关闭"), action: "closeWindow" }
                   ] },
                 { label: qsTr("帮助"), entries: [
-                      { text: qsTr("mcl 项目说明"), action: "about" }
+                      { text: qsTr("mcl 项目说明"), action: "intro" }
                   ] }
             ]
 
