@@ -351,7 +351,7 @@ Linux 下程序从终端启动，`stderr` 抬眼就看见，所以 `install()` �
 `line()` 照旧 `fprintf` —— **行为跟以前一模一样**。
 
 Windows 下可执行文件是 `WIN32_EXECUTABLE`，**压根没有控制台**，`stderr` 写进去没人看。
-那边改成落文件（`%LOCALAPPDATA%/mcl/mcl.log`），并且用 `qInstallMessageHandler`
+那边改成落文件（`%APPDATA%/mcl/mcl.log`），并且用 `qInstallMessageHandler`
 把 Qt / QML 自己的警告也接过来 —— QML 报的绑定错误、加载失败在 Windows 上同样看不见，
 不接管就真的两眼一抹黑。文件带毫秒时间戳、超过 2MB 转成 `.1`（只留一代）。
 

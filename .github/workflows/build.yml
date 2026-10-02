@@ -98,7 +98,9 @@ jobs:
 
           # GUI 子系统没有控制台，所以判断只能读落盘的 mcl.log。
           # 光看有没有出图不算数 —— 没编进 WebEngine 时它只是开了个空窗口。
-          $log = Join-Path $env:LOCALAPPDATA "mcl\mcl.log"
+          # 注意是 APPDATA（Roaming）—— QStandardPaths::AppDataLocation
+          # 在 Windows 上给的就是这儿，不是 LOCALAPPDATA
+          $log = Join-Path $env:APPDATA "mcl\mcl.log"
           if (-not (Select-String -Path $log -Pattern "内置浏览器: 有" -Quiet)) {
             throw "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"
           }
@@ -119,7 +121,9 @@ jobs:
         shell: pwsh
         run: |
           # Windows 上没有控制台，日志全在这儿 —— 出问题时它是唯一的线索
-          $log = Join-Path $env:LOCALAPPDATA "mcl\mcl.log"
+          # 注意是 APPDATA（Roaming）—— QStandardPaths::AppDataLocation
+          # 在 Windows 上给的就是这儿，不是 LOCALAPPDATA
+          $log = Join-Path $env:APPDATA "mcl\mcl.log"
           if (Test-Path $log) {
             Write-Host "----- mcl.log（末尾 60 行）-----"
             Get-Content $log -Tail 60

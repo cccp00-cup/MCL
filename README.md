@@ -46,7 +46,7 @@ mcl 把 macOS 12 的桌面交互——顶部菜单栏、底部 Dock、自绘窗�
 - **启动台右键实例**：启动 / 重命名 / **实例设置** / **打开实例文件夹** / 钉到 Dock / 删除
 - **实例设置**：改名字、看图标/版本/加载器、**指定用哪个 Java**、管理这个实例的模组（启用 / 停用 / 移除 / 检查更新），点「添加模组…」直接跳到模组市场并绑好这个实例
 - **日志**：Linux 下照旧写 `stderr`（终端里直接看）；**Windows** 上没有控制台，
-  所以落 `%LOCALAPPDATA%/mcl/mcl.log`，并顺带接管 Qt/QML 自己的警告消息，
+  所以落 `%APPDATA%/mcl/mcl.log`，并顺带接管 Qt/QML 自己的警告消息，
   单文件超过 2MB 转成 `.1`
 - **下载器**：并发下载 + 逐个 SHA1 校验；**校验与写盘都在线程池里**（不占主线程），先写 `.part` 再改名
 - **模组加载器**：新建实例菜单里每个版本各带 `+ Fabric` / `+ Forge` / `+ NeoForge` 三行
@@ -123,7 +123,7 @@ cmake --build build -j"$(nproc)"
 
 ```bash
 ./make-deb.sh                     # → build-pkg/mcl_<版本>_<架构>.deb
-sudo apt install ./build-pkg/mcl_1.0.2_amd64.deb
+sudo apt install ./build-pkg/mcl_1.0.3_amd64.deb
 ```
 
 包只装 mcl 本体，Qt6 运行库与 QML 模块由依赖自动补齐。**不依赖 prismlauncher 二进制** ——
