@@ -20,8 +20,9 @@ jobs:
     # 后者已经漂到新镜像上去了，预装的 VS 版本跟着变，
     # 而 Qt 的 win64_msvc2022_64 是要配 VS 2022 用的，绑住更稳。
     runs-on: windows-2022
-    # 装 WebEngine 要多下几百 MB、编译也慢，30 分钟不够用
-    timeout-minutes: 60
+    # 首次要下 WebEngine（几百 MB）+ 编译，实测 60 分钟会被砍掉。
+    # 之后 install-qt-action 有缓存会快得多，但第一次必须留够。
+    timeout-minutes: 100
 
     steps:
       - uses: actions/checkout@v4
