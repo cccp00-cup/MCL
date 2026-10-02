@@ -405,6 +405,18 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**CI 打的 deb 曾经一个 Qt 依赖都没有**：`dpkg-shlibdeps` **只在标准路径里找库**。
+本地打包用的是系统 Qt，一切正常；但 CI 的 Qt 装在
+`/home/runner/work/.../Qt/6.8.2/gcc_64`，它找不到就把 Qt 的库当成"私有库"跳过 ——
+打出来的 deb 里 `Depends` 只有 `libc6` / `libglx0` / `zlib1g` 这些系统库，
+Qt 的一个都没有，用户装完启动就缺库。这个坑本地永远复现不了。
+
+修法是 `CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS` —— 从 `Qt6Core_DIR`
+反推出 Qt 的 lib 目录告诉它。
+
+> 教训：**CI 出的包和本地出的包可能不一样**。凡是"本地好的、CI 那边用户报错"，
+> 先对比两边产物的元数据（`dpkg-deb -f <deb> Depends`）。
+
 **浏览器必须接管 `newWindowRequested`（"点了没反应"的真因）**：
 
 QtWebEngine **默认对 `target="_blank"` / `window.open` 这类新窗口请求不做任何事**。

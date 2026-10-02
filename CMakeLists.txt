@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -277,11 +277,27 @@ if(UNIX AND NOT APPLE)
         "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, libqt6svg6")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 
-    # 内置浏览器**不需要**在这里手写依赖：上面开了 CPACK_DEBIAN_PACKAGE_SHLIBDEPS，
-    # dpkg-shlibdeps 会顺着 ELF 把 libqt6webenginecore6 / libqt6webenginequick6 推出来。
+    # dpkg-shlibdeps 只在标准路径里找库。CI 的 Qt 装在
+    # /home/runner/work/.../Qt/6.8.2/gcc_64，它找不到就把 Qt 的库当成"私有库"跳过 ——
+    # 结果打出来的 deb 里 Depends 一个 Qt 库都没有，用户装完启动就缺库。
+    # （本地打包用的是系统 Qt，所以这个问题只在 CI 的产物上出现。）
+    if(Qt6Core_DIR)
+        get_filename_component(_qt_lib_dir "${Qt6Core_DIR}/../../../lib" ABSOLUTE)
+        if(EXISTS "${_qt_lib_dir}")
+            set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${_qt_lib_dir}")
+        endif()
+    endif()
+
+    # 内置浏览器的运行时依赖。上面虽然开了 SHLIBDEPS，但让它自己推
+    # 依赖 CI 那个非标准路径能被认出来；这里再显式兜一层，稳一点。
     #
-    # （曾经手写过一行 "libqt6webengine6" —— 那个包在 Debian 里根本不存在，
-    #  结果是用户 apt install 时直接卡在"无法满足的依赖关系"上。）
+    # 包名要查过再用：曾经凭记忆写了 "libqt6webengine6"，Debian 里根本没这个包
+    # （真名是 libqt6webenginecore6 / libqt6webenginequick6），
+    # 结果是用户 apt install 直接卡在"无法满足的依赖关系"。
+    if(Qt6WebEngineQuick_FOUND)
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS
+            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libqt6webenginecore6, libqt6webenginequick6")
+    endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/postinst")
         set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
