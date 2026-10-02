@@ -20,8 +20,8 @@ jobs:
     # 后者已经漂到新镜像上去了，预装的 VS 版本跟着变，
     # 而 Qt 的 win64_msvc2022_64 是要配 VS 2022 用的，绑住更稳。
     runs-on: windows-2022
-    # 保险：冒烟那步用 Start-Process -Wait，万一程序不退出也不至于挂满 6 小时
-    timeout-minutes: 30
+    # 装 WebEngine 要多下几百 MB、编译也慢，30 分钟不够用
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +37,15 @@ jobs:
           # 不装的话 find_package 找不到，内置浏览器会被静默跳过
           modules: 'qtwebengine'
           cache: true
+
+      - name: 诊断 —— Qt 里到底有没有 WebEngine
+        shell: pwsh
+        run: |
+          Write-Host "QT_ROOT_DIR=$env:QT_ROOT_DIR"
+          Write-Host "--- lib/cmake 里的 WebEngine ---"
+          $c = Get-ChildItem "$env:QT_ROOT_DIR\lib\cmake" -ErrorAction SilentlyContinue |
+               Where-Object { $_.Name -match "WebEngine" }
+          if ($c) { $c.Name } else { Write-Host "（cmake 配置里没有 WebEngine）" }
 
       - name: 配置
         # 这里**不写死 generator 版本** —— 镜像一升级，generator 名字就变了，
@@ -160,6 +169,19 @@ jobs:
           modules: 'qtwebengine'
           cache: true
 
+      - name: 诊断 —— Qt 里到底有没有 WebEngine
+        run: |
+          echo "QT_ROOT_DIR=$QT_ROOT_DIR"
+          echo "--- lib/cmake 里的 WebEngine ---"
+          ls "$QT_ROOT_DIR/lib/cmake" 2>/dev/null | grep -i webengine \
+            || echo "（cmake 配置里没有 WebEngine）"
+          echo "--- lib 里的 WebEngine ---"
+          ls "$QT_ROOT_DIR/lib" 2>/dev/null | grep -i webengine | head -4 \
+            || echo "（lib 里没有 WebEngine）"
+          echo "--- qml 模块 ---"
+          ls "$QT_ROOT_DIR/qml" 2>/dev/null | grep -i webengine \
+            || echo "（qml 里没有 WebEngine）"
+
       - name: 配置
         run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
@@ -177,9 +199,12 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          # WebEngine 在离屏下要关掉沙箱，CI 容器里没有所需的权限
-          QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" \
-            ./build/mcl --open browser --shot browser.png 2>&1 | tee /dev/stderr | grep -q "内置浏览器: 有" \
+          # 光看有没有出图不算数 —— 没编进 WebEngine 时它只是开了个空窗口。
+          # WebEngine 在离屏下还要关掉沙箱，CI 容器里没那个权限。
+          out=$(QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu" \
+                ./build/mcl --open browser --shot browser.png 2>&1)
+          echo "$out" | tail -20
+          echo "$out" | grep -q "内置浏览器: 有" \
             || { echo "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"; exit 1; }
           test -s browser.png || { echo "浏览器窗口没出图"; exit 1; }
           echo "内置浏览器可用"
