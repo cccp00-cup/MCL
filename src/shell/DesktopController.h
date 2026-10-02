@@ -33,6 +33,9 @@ class DesktopController : public QObject
     Q_PROPERTY(QStringList runningApps READ runningApps NOTIFY runningAppsChanged)
 
     // 菜单栏左侧显示的名字：有窗口聚焦时是应用名，否则是"访达"
+    // 打开内置浏览器时要导航到的地址。AppBrowser 读它来定初始页 ——
+    // 这样"用浏览器打开登录页"和"用户自己从 Dock 点开"能共用同一个窗口类型。
+    Q_PROPERTY(QString pendingBrowserUrl READ pendingBrowserUrl NOTIFY pendingBrowserUrlChanged)
     Q_PROPERTY(QString frontAppName READ frontAppName NOTIFY frontAppChanged)
     Q_PROPERTY(QString frontAppId READ frontAppId NOTIFY frontAppChanged)
 
@@ -54,6 +57,7 @@ public:
     QString frontAppName() const;
     QString frontAppId() const;
     QString overlay() const { return m_overlay; }
+    QString pendingBrowserUrl() const { return m_pendingBrowserUrl; }
     QString editingInstance() const { return m_editingInstance; }
 
     void setOverlay(const QString &overlay);
@@ -61,6 +65,11 @@ public:
 
     // —— 由 QML 调用的桌面操作 ——
     Q_INVOKABLE void openApp(const QString &appId);
+
+    // 打开内置浏览器并导航到 url（空 url = 只开窗口）。
+    // 没编进 WebEngine 时 Dock 里没有 browser，这个调用不会有任何效果 ——
+    // 所以调用方要自己回退到系统浏览器。
+    Q_INVOKABLE void openBrowser(const QString &url);
     Q_INVOKABLE void closeWindow(int windowId);
     Q_INVOKABLE void quitApp(const QString &appId);
     Q_INVOKABLE void focusWindow(int windowId);
@@ -79,6 +88,7 @@ Q_SIGNALS:
     void clockChanged();
     void runningAppsChanged();
     void frontAppChanged();
+    void pendingBrowserUrlChanged();
     void overlayChanged();
     void editingInstanceChanged();
 
@@ -96,6 +106,7 @@ private:
     WindowModel *m_windows = nullptr;
     QSet<QString> m_running;
     QString m_frontAppId = QStringLiteral("finder");
+    QString m_pendingBrowserUrl;
     QString m_overlay;
     QString m_editingInstance;
     // 新窗口的级联偏移，避免每个窗口都精确重叠

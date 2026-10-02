@@ -162,7 +162,9 @@ void AccountManager::signOut()
     m_accessToken.clear();
     m_refreshToken.clear();
     m_expiresAtMs = 0;
+    m_lastUserCode.clear();
     save();
+    Q_EMIT changed();
     Q_EMIT identityChanged();
 }
 
@@ -236,11 +238,11 @@ void AccountManager::requestDeviceCode()
         // 用户切过去按一下粘贴就行，不用在两块屏之间手抄 8 位码。
         m_lastUserCode = userCode;
         copyDeviceCode(userCode);
-        const bool opened = QDesktopServices::openUrl(QUrl(m_verificationUri));
 
-        setStatus(opened
-                      ? QStringLiteral("已在浏览器打开登录页，设备码已复制到剪贴板")
-                      : QStringLiteral("设备码已复制，请手动打开 %1").arg(m_verificationUri));
+        // 浏览器由界面来开（有内置的用内置，没有才用系统）。
+        // 这里只负责把码复制好、把状态说清楚。
+        setStatus(QStringLiteral("设备码已复制，去浏览器里粘贴完成登录"));
+        Q_EMIT changed();
 
         Q_EMIT deviceCodeReady(userCode, m_verificationUri);
         m_pollTimer->start();
@@ -276,7 +278,8 @@ void AccountManager::reopenVerificationPage()
     if (m_verificationUri.isEmpty())
         return;
     copyDeviceCode(m_lastUserCode);
-    QDesktopServices::openUrl(QUrl(m_verificationUri));
+    // 重新打开也走同一个信号，界面会按同样规则决定用哪个浏览器
+    Q_EMIT deviceCodeReady(m_lastUserCode, m_verificationUri);
 }
 
 void AccountManager::pollToken()

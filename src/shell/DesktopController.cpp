@@ -210,6 +210,17 @@ int DesktopController::focusedWindowId() const
     return 0;
 }
 
+void DesktopController::openBrowser(const QString &url)
+{
+    // 没编进 WebEngine 时 Dock 里根本没有 browser 这一项，
+    // openApp 会直接什么都不做 —— 调用方据此回退到系统浏览器。
+    if (!url.isEmpty()) {
+        m_pendingBrowserUrl = url;
+        Q_EMIT pendingBrowserUrlChanged();
+    }
+    openApp(QStringLiteral("browser"));
+}
+
 void DesktopController::openApp(const QString &appId)
 {
     if (appId.isEmpty() || appId == QLatin1String("finder"))

@@ -33,9 +33,24 @@ Item {
         return searchBase + encodeURIComponent(t)
     }
 
-    // 外部（比如"用浏览器打开登录页"）可以直接调它
+    // 外部（比如"登录微软账户"）可以直接调它
     function open(url) {
         view.url = url
+    }
+
+    // 启动器里点「登录微软账户」时会先把验证页地址塞进 desktop.pendingBrowserUrl
+    // 再打开这个窗口，所以这里要跟着它走。
+    Component.onCompleted: {
+        if (desktop.pendingBrowserUrl !== "")
+            view.url = desktop.pendingBrowserUrl
+    }
+    Connections {
+        target: desktop
+        function onPendingBrowserUrlChanged() {
+            const target = desktop.pendingBrowserUrl
+            if (target !== "" && target !== view.url)
+                view.url = target
+        }
     }
 
     Rectangle {
@@ -181,11 +196,60 @@ Item {
             }
         }
 
+        // ——————————————— 设备码提示条
+        //
+        // 从「登录微软账户」跳过来时才有。把 8 位码顶在页面正上方，
+        // 省得用户还要切回启动器去看。
+        Rectangle {
+            id: codeBar
+            width: parent.width
+            height: (account.deviceCode !== "" && !account.signedIn) ? 30 : 0
+            visible: height > 0
+            color: Qt.rgba(0.04, 0.52, 1.0, 0.16)
+
+            Row {
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("设备码 %1 已复制 —— 粘贴到下面的页面里即可").arg(account.deviceCode)
+                    font.pixelSize: 11
+                    color: Theme.textPrimary
+                }
+
+                Rectangle {
+                    width: copyLabel.width + 16
+                    height: 19
+                    radius: 5
+                    color: copyMouse.containsMouse ? Theme.hoverFill : "transparent"
+                    border.width: 1
+                    border.color: Theme.separator
+                    Text {
+                        id: copyLabel
+                        anchors.centerIn: parent
+                        text: qsTr("再复制一次")
+                        font.pixelSize: 10
+                        color: Theme.textPrimary
+                    }
+                    MouseArea {
+                        id: copyMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: account.copyLastDeviceCode()
+                    }
+                }
+            }
+        }
+
         // ——————————————— 网页
         WebEngineView {
             id: view
             width: parent.width
-            height: parent.height - toolbar.height
+            height: parent.height - toolbar.height - codeBar.height
             url: root.homePage
             backgroundColor: "#ffffff"
 

@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <QFont>
 #include <QClipboard>
+#include <QDesktopServices>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("mcl"));
     // 不设 organizationName：否则 QStandardPaths::AppConfigLocation 会变成
     // ~/.config/mcl/mcl（org/app 各一层），配置目录凭空多一层。
-    app.setApplicationVersion(QStringLiteral("0.8.1"));
+    app.setApplicationVersion(QStringLiteral("0.9.0"));
     app.setDesktopFileName(QStringLiteral("mcl"));
 
     // 界面全部自绘，不依赖任何平台控件样式
@@ -138,6 +139,21 @@ int main(int argc, char *argv[])
     engine.loadFromModule("Mcl", "Desktop");
     if (engine.rootObjects().isEmpty())
         return 1;
+
+    // 微软登录拿到设备码后，界面来把验证页打开。
+    // 有内置浏览器就用它（不打断用户、也不用切应用），没有才回退到系统浏览器。
+    // AccountManager 自己不碰浏览器，就是为了让这里能这么决定。
+    QObject::connect(&account, &AccountManager::deviceCodeReady, &app,
+                     [&desktop](const QString &, const QString &uri) {
+#ifdef MCL_HAS_BROWSER
+        // 有内置浏览器就用它 —— 不打断用户、也不用切到别的应用。
+        // 设备码已经在剪贴板里了，粘一下就行。
+        desktop.openBrowser(uri);
+#else
+        // 没编进 WebEngine 就只能交给系统浏览器
+        QDesktopServices::openUrl(QUrl(uri));
+#endif
+    });
 
     // 调试：直接走一遍微软登录，验证链路
     if (args.contains(QStringLiteral("--ms-login"))) {

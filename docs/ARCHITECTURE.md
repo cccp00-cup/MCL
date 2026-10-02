@@ -405,6 +405,21 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**微软登录改用内置浏览器**：`AccountManager` **不再自己开浏览器** —— 拿到设备码后只做两件事：
+把码放进剪贴板、发 `deviceCodeReady(userCode, uri)` 信号。**由界面决定用哪个浏览器**：
+
+```cpp
+#ifdef MCL_HAS_BROWSER
+        desktop.openBrowser(uri);      // 内置的，不打断用户
+#else
+        QDesktopServices::openUrl(uri); // 只能交给系统
+#endif
+```
+
+这样"重新打开验证页"也复用同一个信号，规则只有一处。
+内置浏览器顶部会顶一条设备码提示条（`account.deviceCode`），省得用户切回启动器找那 8 位码；
+登录成功后 `AccountManager::finish()` 会清空它，提示条随之消失。
+
 **内置浏览器是可选依赖**：用 `QtWebEngineQuick`（Chromium 内核），但**做成可选** ——
 `find_package(Qt6 QUIET COMPONENTS WebEngineQuick)`，有就编进 Dock，没有就静默跳过。
 

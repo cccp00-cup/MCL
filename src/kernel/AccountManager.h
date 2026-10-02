@@ -40,6 +40,9 @@ class AccountManager : public QObject
     Q_PROPERTY(bool signedIn READ signedIn NOTIFY changed)
     // 苹果菜单里显示的那一行
     Q_PROPERTY(QString menuLabel READ menuLabel NOTIFY changed)
+    // 当前这轮的设备码。内置浏览器会把它顶在页面上方，省得用户切回启动器找。
+    // 登录完成或登出后清空。
+    Q_PROPERTY(QString deviceCode READ deviceCode NOTIFY changed)
 
 public:
     explicit AccountManager(QObject *parent = nullptr);
@@ -55,6 +58,7 @@ public:
     bool busy() const { return m_busy; }
     bool signedIn() const { return !m_kind.isEmpty(); }
     QString menuLabel() const;
+    QString deviceCode() const { return m_lastUserCode; }
 
     // 启动游戏时用的凭据
     QString accessToken() const;
@@ -74,7 +78,9 @@ Q_SIGNALS:
     // 身份变了（登录/登出/换账户），界面该刷新菜单标题
     void identityChanged();
     void failed(const QString &error);
-    // 设备码就绪：界面应该提示用户去哪个网址输什么码
+    // 设备码就绪，界面该把验证页打开给用户。
+    // **这里不自己开浏览器** —— 交给界面决定：有内置浏览器就用它，
+    // 没有才回退到系统浏览器。（重新打开验证页也走同一个信号。）
     void deviceCodeReady(const QString &userCode, const QString &verificationUri);
     // 令牌已经过期且续不回来，得重新登录
     void tokenExpired();
