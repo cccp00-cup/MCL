@@ -1,10 +1,16 @@
 import QtQuick
 import QtWebEngine
 
-// 内置浏览器。
+// 内置浏览器（多标签）。
 //
 // 默认搜索引擎是 Bing。地址栏接受两种输入：像网址就当网址打开，
 // 否则拿去做搜索 —— 和常见浏览器的行为一致。
+//
+// **为什么必须接管 newWindowRequested**：
+// QtWebEngine 默认**不处理** target="_blank" / window.open 这类新窗口请求，
+// 表现就是"点了没反应"。B 站点视频、GitHub 上很多链接都属于这种，
+// 所以不接管的话用户会觉得浏览器坏了 —— 其实请求根本没被响应。
+// 这里统一改成"在新标签里打开"，这也正是标签页存在的意义。
 //
 // 这个文件 import 了 QtWebEngine，所以**只能通过字符串 source 惰性加载**
 // （见 McWindow 里的说明）：没有 WebEngine 的环境下，连 Component 声明
@@ -15,41 +21,88 @@ Item {
     readonly property string searchBase: "https://www.bing.com/search?q="
     readonly property string homePage: "https://www.bing.com"
 
-    // 地址栏里的文本（跟随实际加载的地址）
+    // 地址栏里的文本（跟随当前标签实际加载的地址）
     property string addressText: homePage
+    property int currentIndex: 0
+
+    // 每个标签一个 WebEngineView。跟着 ListModel 的增删自动创建/销毁。
+    ListModel { id: tabModel }
 
     // 把用户输入变成真正要打开的地址
     function normalizeUrl(text) {
         const t = String(text).trim()
         if (t === "")
             return homePage
-        // 已经带协议的直接用
         if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//.test(t))
             return t
-        // 像域名（有点、没空格）就补 https
         if (!/\s/.test(t) && /^[^\s/]+\.[^\s/]{2,}/.test(t))
             return "https://" + t
-        // 其余当搜索词，交给 Bing
         return searchBase + encodeURIComponent(t)
     }
 
-    // 外部（比如"登录微软账户"）可以直接调它
-    function open(url) {
-        view.url = url
+    function addTab(url) {
+        const target = (url && url !== "") ? url : homePage
+        tabModel.append({ tabUrl: target, tabTitle: qsTr("新标签页") })
+        root.currentIndex = tabModel.count - 1
+        return root.currentIndex
     }
 
-    // 启动器里点「登录微软账户」时会先把验证页地址塞进 desktop.pendingBrowserUrl
-    // 再打开这个窗口，所以这里要跟着它走。
-    Component.onCompleted: {
-        if (desktop.pendingBrowserUrl !== "")
-            view.url = desktop.pendingBrowserUrl
+    function closeTab(index) {
+        if (index < 0 || index >= tabModel.count)
+            return
+
+        if (tabModel.count === 1) {
+            // 最后一个标签不真关（那样内容区会空掉），回到首页就行
+            tabModel.setProperty(0, "tabUrl", homePage)
+            tabModel.setProperty(0, "tabTitle", qsTr("新标签页"))
+            return
+        }
+
+        tabModel.remove(index)
+        if (root.currentIndex >= tabModel.count)
+            root.currentIndex = tabModel.count - 1
+        else if (index < root.currentIndex)
+            --root.currentIndex
     }
+
+    // 当前标签的 WebEngineView
+    function currentView() {
+        return viewRepeater.itemAt(root.currentIndex)
+    }
+
+    function navigate(url) {
+        const v = currentView()
+        if (v)
+            v.url = url
+    }
+
+    function goBack() { const v = currentView(); if (v && v.canGoBack) v.goBack() }
+    function goForward() { const v = currentView(); if (v && v.canGoForward) v.goForward() }
+    function reloadOrStop() {
+        const v = currentView()
+        if (!v)
+            return
+        if (v.loading)
+            v.stop()
+        else
+            v.reload()
+    }
+    function loading() { const v = currentView(); return v ? v.loading : false }
+    function loadProgress() { const v = currentView(); return v ? v.loadProgress : 0 }
+    function canGoBack() { const v = currentView(); return v ? v.canGoBack : false }
+    function canGoForward() { const v = currentView(); return v ? v.canGoForward : false }
+
+    Component.onCompleted: {
+        addTab(desktop.pendingBrowserUrl !== "" ? desktop.pendingBrowserUrl : homePage)
+    }
+
+    // 启动器里点「登录微软账户」会先设好 pendingBrowserUrl 再开这个窗口
     Connections {
         target: desktop
         function onPendingBrowserUrlChanged() {
             const target = desktop.pendingBrowserUrl
-            if (target !== "" && target !== view.url)
-                view.url = target
+            if (target !== "")
+                root.navigate(target)
         }
     }
 
@@ -61,6 +114,110 @@ Item {
     Column {
         anchors.fill: parent
         spacing: 0
+
+        // ——————————————— 标签栏
+        Rectangle {
+            id: tabBar
+            width: parent.width
+            height: 30
+            color: shellSettings.darkMode ? Qt.rgba(0, 0, 0, 0.18)
+                                          : Qt.rgba(0, 0, 0, 0.06)
+
+            Row {
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                Repeater {
+                    model: tabModel
+                    delegate: Rectangle {
+                        required property int index
+                        required property string tabTitle
+
+                        width: Math.min(180, Math.max(96, tabLabel.implicitWidth + 40))
+                        height: 24
+                        radius: 6
+                        color: index === root.currentIndex
+                               ? (shellSettings.darkMode ? Qt.rgba(1, 1, 1, 0.14)
+                                                         : Qt.rgba(1, 1, 1, 0.90))
+                               : (tabMouse.containsMouse ? Theme.hoverFill : "transparent")
+
+                        Text {
+                            id: tabLabel
+                            anchors.left: parent.left
+                            anchors.leftMargin: 9
+                            anchors.right: closeTabButton.left
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: parent.tabTitle
+                            font.pixelSize: 11
+                            color: index === root.currentIndex ? Theme.textPrimary
+                                                               : Theme.textSecondary
+                            elide: Text.ElideRight
+                        }
+
+                        // 关闭这个标签
+                        Rectangle {
+                            id: closeTabButton
+                            anchors.right: parent.right
+                            anchors.rightMargin: 5
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 15
+                            height: 15
+                            radius: 7.5
+                            color: closeTabMouse.containsMouse ? Theme.hoverFill : "transparent"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "✕"
+                                font.pixelSize: 9
+                                color: Theme.textSecondary
+                            }
+                            MouseArea {
+                                id: closeTabMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.closeTab(index)
+                            }
+                        }
+
+                        MouseArea {
+                            id: tabMouse
+                            anchors.left: parent.left
+                            anchors.right: closeTabButton.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.currentIndex = index
+                        }
+                    }
+                }
+
+                // 新建标签
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 6
+                    color: newTabMouse.containsMouse ? Theme.hoverFill : "transparent"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "+"
+                        font.pixelSize: 15
+                        color: Theme.textSecondary
+                    }
+                    MouseArea {
+                        id: newTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.addTab(homePage)
+                    }
+                }
+            }
+        }
 
         // ——————————————— 工具栏
         Rectangle {
@@ -79,9 +236,9 @@ Item {
                 // 后退
                 Rectangle {
                     width: 24; height: 24; radius: 6
-                    color: backMouse.containsMouse && view.canGoBack
+                    color: backMouse.containsMouse && root.canGoBack()
                            ? Theme.hoverFill : "transparent"
-                    opacity: view.canGoBack ? 1.0 : 0.35
+                    opacity: root.canGoBack() ? 1.0 : 0.35
                     Text {
                         anchors.centerIn: parent
                         text: "‹"
@@ -92,17 +249,17 @@ Item {
                         id: backMouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        enabled: view.canGoBack
+                        enabled: root.canGoBack()
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: view.goBack()
+                        onClicked: root.goBack()
                     }
                 }
                 // 前进
                 Rectangle {
                     width: 24; height: 24; radius: 6
-                    color: fwdMouse.containsMouse && view.canGoForward
+                    color: fwdMouse.containsMouse && root.canGoForward()
                            ? Theme.hoverFill : "transparent"
-                    opacity: view.canGoForward ? 1.0 : 0.35
+                    opacity: root.canGoForward() ? 1.0 : 0.35
                     Text {
                         anchors.centerIn: parent
                         text: "›"
@@ -113,9 +270,9 @@ Item {
                         id: fwdMouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        enabled: view.canGoForward
+                        enabled: root.canGoForward()
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: view.goForward()
+                        onClicked: root.goForward()
                     }
                 }
                 // 刷新 / 停止
@@ -124,7 +281,7 @@ Item {
                     color: reloadMouse.containsMouse ? Theme.hoverFill : "transparent"
                     Text {
                         anchors.centerIn: parent
-                        text: view.loading ? "✕" : "⟳"
+                        text: root.loading() ? "✕" : "⟳"
                         font.pixelSize: 14
                         color: Theme.textPrimary
                     }
@@ -133,7 +290,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: view.loading ? view.stop() : view.reload()
+                        onClicked: root.reloadOrStop()
                     }
                 }
             }
@@ -168,8 +325,9 @@ Item {
                     inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoPredictiveText
 
                     onAccepted: {
-                        root.addressText = normalizeUrl(text)
-                        view.url = root.addressText
+                        const target = normalizeUrl(text)
+                        root.addressText = target
+                        root.navigate(target)
                         focus = false
                     }
                     // 点进地址栏全选，省得先删一遍
@@ -190,9 +348,9 @@ Item {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 height: 2
-                visible: view.loading
+                visible: root.loading()
                 color: Theme.accent
-                width: parent.width * (view.loadProgress / 100.0)
+                width: parent.width * (root.loadProgress() / 100.0)
             }
         }
 
@@ -246,22 +404,51 @@ Item {
         }
 
         // ——————————————— 网页
-        WebEngineView {
-            id: view
+        Item {
+            id: contentArea
             width: parent.width
-            height: parent.height - toolbar.height - codeBar.height
-            url: root.homePage
-            backgroundColor: "#ffffff"
+            height: parent.height - tabBar.height - toolbar.height - codeBar.height
 
-            // 地址栏跟着实际地址走（后退/点链接也会更新）
-            onUrlChanged: root.addressText = url
+            Repeater {
+                id: viewRepeater
+                model: tabModel
 
-            onLoadingChanged: function (request) {
-                if (request.status === WebEngineView.LoadSucceededStatus
-                        || request.status === WebEngineView.LoadFailedStatus)
-                    root.addressText = url
-                if (request.status === WebEngineView.LoadFailedStatus)
-                    console.log("页面加载失败:", request.errorString, url)
+                delegate: WebEngineView {
+                    required property int index
+                    required property string tabUrl
+
+                    anchors.fill: parent
+                    // 非当前标签只是不显示，页面照常留在内存里（切回来不用重载）
+                    visible: index === root.currentIndex
+                    url: tabUrl
+                    backgroundColor: "#ffffff"
+
+                    onUrlChanged: {
+                        if (index === root.currentIndex)
+                            root.addressText = url
+                    }
+                    onTitleChanged: {
+                        if (title !== "")
+                            tabModel.setProperty(index, "tabTitle", title)
+                    }
+                    onLoadingChanged: function (request) {
+                        if (index === root.currentIndex
+                                && (request.status === WebEngineView.LoadSucceededStatus
+                                    || request.status === WebEngineView.LoadFailedStatus))
+                            root.addressText = url
+                        if (request.status === WebEngineView.LoadFailedStatus)
+                            console.log("页面加载失败:", request.errorString, url)
+                    }
+
+                    // ★ 关键：接管新窗口请求。
+                    // QtWebEngine 默认对它**不做任何事** —— 用户看到的就是
+                    // "点了没反应"。B 站的视频、GitHub 的很多链接都走这条路。
+                    // 这里改成在新标签里打开。
+                    onNewWindowRequested: function (request) {
+                        root.addTab(request.requestedUrl)
+                        request.action = WebEngineView.IgnoreRequest
+                    }
+                }
             }
         }
     }

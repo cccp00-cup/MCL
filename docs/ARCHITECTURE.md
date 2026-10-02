@@ -405,6 +405,29 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**浏览器必须接管 `newWindowRequested`（"点了没反应"的真因）**：
+
+QtWebEngine **默认对 `target="_blank"` / `window.open` 这类新窗口请求不做任何事**。
+用户看到的就是"怎么点都打不开" —— B 站的视频、GitHub 上很多链接都走这条路，
+但请求根本没被响应，页面也不报错，所以特别像"浏览器坏了"。
+
+修法是接管它，改成在新标签里打开 —— **这也是标签页存在的意义**：
+
+```qml
+onNewWindowRequested: function (request) {
+    root.addTab(request.requestedUrl)
+    request.action = WebEngineView.IgnoreRequest
+}
+```
+
+多标签的实现：一个 `ListModel` 存标签，`Repeater` 给每个标签造一个
+`WebEngineView`，非当前标签只是 `visible: false`（页面留在内存里，
+切回来不用重载）。地址栏/前进后退这些作用于"当前标签"，
+通过 `Repeater.itemAt(currentIndex)` 拿。
+
+> 记一笔：QtWebEngine 里凡是"点了没反应"，先怀疑是不是走到了新窗口请求。
+> 它默认是静默忽略的。
+
 **deb 依赖别手写，交给 SHLIBDEPS**：给内置浏览器声明运行时依赖时，
 我手写了个 `libqt6webengine6` —— **Debian 里根本没这个包**（它叫
 `libqt6webenginecore6` / `libqt6webenginequick6`），结果是用户
