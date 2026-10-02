@@ -22,6 +22,11 @@ if(Qt6WebEngineQuick_FOUND)
     message(STATUS "找到 QtWebEngine —— 内置浏览器会编进来")
 else()
     message(STATUS "没找到 QtWebEngine —— 跳过内置浏览器（装 qt6-webengine-dev 可启用）")
+    # 把真正的原因打出来。QUIET 会把 "Could NOT find WrapVulkanHeaders"
+    # 这类关键信息一起吞掉，之前就是因此排查了好几轮。
+    if(Qt6WebEngineQuick_NOT_FOUND_MESSAGE)
+        message(STATUS "  原因: ${Qt6WebEngineQuick_NOT_FOUND_MESSAGE}")
+    endif()
 endif()
 
 # zlib 只有 ZipExtract 用（解压 natives 和 installer）。

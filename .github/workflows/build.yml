@@ -33,9 +33,10 @@ jobs:
           # 用 MSVC 而不是 mingw：runner 自带 MSVC 工具链，
           # 省掉"CMake 挑错编译器去链 mingw 版 Qt"这类麻烦
           arch: win64_msvc2022_64
-          # WebEngine 不在 Qt 的基础包里，必须显式点名 ——
-          # 不装的话 find_package 找不到，内置浏览器会被静默跳过
-          modules: 'qtwebengine'
+          # WebEngine 不在 Qt 的基础包里，它依赖的那几个模块也要一起点名 ——
+          # 少一个 就会让 WebEngineQuickConfig 整体 find_package 失败，
+          # 内置浏览器被静默跳过
+          modules: 'qtwebengine qtpositioning qtwebchannel qtwebsockets'
           cache: true
 
       - name: 诊断 —— Qt 里到底有没有 WebEngine
@@ -160,13 +161,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential ninja-build zlib1g-dev libgl1-mesa-dev \
             libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
-            libasound2t64 libxkbfile1 libminizip1 libwebpmux3 libxkbcommon-x11-0
+            libasound2t64 libxkbfile1 libminizip1 libwebpmux3 libxkbcommon-x11-0 \
+            libvulkan-dev
 
       - name: 装 Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.2'
-          modules: 'qtwebengine'
+          modules: 'qtwebengine qtpositioning qtwebchannel qtwebsockets'
           cache: true
 
       - name: 诊断 —— Qt 里到底有没有 WebEngine
