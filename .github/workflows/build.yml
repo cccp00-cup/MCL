@@ -86,19 +86,23 @@ jobs:
           $env:QT_QPA_PLATFORM = "offscreen"
           # 离屏下 Chromium 起不来沙箱，CI 里没那个权限
           $env:QTWEBENGINE_CHROMIUM_FLAGS = "--no-sandbox --disable-gpu"
+
+          # **必须带 --shot 让它自己退出**。GUI 程序不会自己结束 ——
+          # 之前这行没带，配合管道等了它一个多小时才被超时砍掉。
           Start-Process -FilePath ".\build\Release\mcl.exe" `
                         -ArgumentList "--open", "browser", "--shot", "browser.png" -Wait
-          # 光看有没有出图不算数 —— 没编进 WebEngine 时它只是开了个空窗口。
-          # 要确认程序自己报的是"有"。
-          $out = & ".\build\Release\mcl.exe" --open browser 2>&1 | Out-String
-          if ($out -notmatch "内置浏览器: 有") {
-            throw "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"
-          }
+
           if (-not (Test-Path browser.png)) {
             throw "浏览器窗口没出图"
           }
-          Write-Host "内置浏览器可用"
 
+          # GUI 子系统没有控制台，所以判断只能读落盘的 mcl.log。
+          # 光看有没有出图不算数 —— 没编进 WebEngine 时它只是开了个空窗口。
+          $log = Join-Path $env:LOCALAPPDATA "mcl\mcl.log"
+          if (-not (Select-String -Path $log -Pattern "内置浏览器: 有" -Quiet)) {
+            throw "这版没编进 WebEngine —— 检查 modules: qtwebengine 那行"
+          }
+          Write-Host "内置浏览器可用"
       - name: 看看系统有哪些字体
         if: always()
         shell: pwsh
