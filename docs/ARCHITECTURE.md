@@ -417,6 +417,26 @@ Qt 的一个都没有，用户装完启动就缺库。这个坑本地永远复�
 > 教训：**CI 出的包和本地出的包可能不一样**。凡是"本地好的、CI 那边用户报错"，
 > 先对比两边产物的元数据（`dpkg-deb -f <deb> Depends`）。
 
+**QML 组件放 `RESOURCES` 就丢了单例作用域**（浏览器"空白页"的真因）：
+
+当初为了绕开 `qt_add_qml_module` 的 import 扫描，把 `AppBrowser.qml` 丢进了
+`RESOURCES`。副作用是它**离开了 QML 模块**，于是访问不到 `Theme` / `shellSettings`
+这些**单例** —— 满屏 `ReferenceError: Theme is not defined`，界面全崩（看起来就是一片空白）。
+`account` / `desktop` 那些是 context property，所以不受影响，容易误判成"环境问题"。
+
+正确做法是**有条件地放进 `QML_FILES`**：
+
+```cmake
+if(Qt6WebEngineQuick_FOUND)
+    list(APPEND MCL_QML_FILES AppBrowser)   # 有 WebEngine 才进模块
+endif()
+```
+
+这样有 WebEngine 时它在模块里（能用单例），没有时根本不参与扫描（配置不会失败）。
+
+> 排查提示：QML 里出现 `Xxx is not defined` 而 `Xxx` 明明是单例，先查这个文件
+> 是不是没走 `qt_add_qml_module`。
+
 **浏览器必须接管 `newWindowRequested`（"点了没反应"的真因）**：
 
 QtWebEngine **默认对 `target="_blank"` / `window.open` 这类新窗口请求不做任何事**。

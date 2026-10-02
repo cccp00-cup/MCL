@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 1.0.1
+    VERSION 1.0.2
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -150,6 +150,14 @@ set(MCL_QML_FILES
     AppIntro
 )
 
+# 内置浏览器只有在真的编进来时才进 QML 模块。
+# 放进模块它才能访问 Theme / shellSettings 这些单例 —— 之前为了绕开
+# import 扫描把它丢进 RESOURCES，结果就是满屏 "Theme is not defined"、
+# 界面一片空白。而没有 WebEngine 时不放，扫描也就不会去找那个插件。
+if(Qt6WebEngineQuick_FOUND)
+    list(APPEND MCL_QML_FILES AppBrowser)
+endif()
+
 foreach(_qml IN LISTS MCL_QML_FILES)
     set_source_files_properties(qml/${_qml}.qml PROPERTIES QT_RESOURCE_ALIAS ${_qml}.qml)
 endforeach()
@@ -185,10 +193,6 @@ qt_add_resources(mcl "mcl_icons"
         icons/palette.svg
         icons/sparkle.svg
         icons/browser.svg
-        # 内置浏览器单独走 resources，不进 QML_FILES：
-        # 它 import 了 QtWebEngine，而 qt_add_qml_module 会扫描 QML 的 import
-        # 并据此去找对应插件；没装 qt6-webengine-dev 的环境会因此直接配置失败。
-        qml/AppBrowser.qml
         assets/background.jpg
         assets/apple-logo.png
         icons/png/mcl-256.png

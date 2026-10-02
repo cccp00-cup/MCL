@@ -299,7 +299,7 @@ Item {
             sourceComponent: (win.app === "browser") ? null : componentFor(win.app)
 
             // 浏览器走 RESOURCES 那条 qrc 路径，不是 qrc:/qt/qml —— 见 CMakeLists
-            readonly property string browserUrl: "qrc:/mcl/qml/AppBrowser.qml"
+            readonly property string browserUrl: "qrc:/qt/qml/Mcl/AppBrowser.qml"
         }
 
         // —— 缩放热区
