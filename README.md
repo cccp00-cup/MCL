@@ -123,7 +123,7 @@ cmake --build build -j"$(nproc)"
 
 ```bash
 ./make-deb.sh                     # → build-pkg/mcl_<版本>_<架构>.deb
-sudo apt install ./build-pkg/mcl_0.9.0_amd64.deb
+sudo apt install ./build-pkg/mcl_0.9.1_amd64.deb
 ```
 
 包只装 mcl 本体，Qt6 运行库与 QML 模块由依赖自动补齐。**不依赖 prismlauncher 二进制** ——

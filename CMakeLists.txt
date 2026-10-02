@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(mcl
-    VERSION 0.9.0
+    VERSION 0.9.1
     DESCRIPTION "macOS 12 style desktop shell with a Minecraft launcher kernel"
     LANGUAGES CXX
 )
@@ -277,12 +277,11 @@ if(UNIX AND NOT APPLE)
         "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, libqt6svg6")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 
-    # 内置浏览器的运行时依赖。只有真把它编进去了才声明 ——
-    # 否则用户会白装一个上百 MB 的 WebEngine。
-    if(Qt6WebEngineQuick_FOUND)
-        set(CPACK_DEBIAN_PACKAGE_DEPENDS
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libqt6webengine6")
-    endif()
+    # 内置浏览器**不需要**在这里手写依赖：上面开了 CPACK_DEBIAN_PACKAGE_SHLIBDEPS，
+    # dpkg-shlibdeps 会顺着 ELF 把 libqt6webenginecore6 / libqt6webenginequick6 推出来。
+    #
+    # （曾经手写过一行 "libqt6webengine6" —— 那个包在 Debian 里根本不存在，
+    #  结果是用户 apt install 时直接卡在"无法满足的依赖关系"上。）
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/postinst")
         set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA

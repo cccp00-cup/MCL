@@ -405,6 +405,17 @@ qt.network.http2: stream 15 finished with error: "HTTP/2 protocol error"
 少的只是冷门老模组。界面上搜不到东西时会把这一点说出来，免得用户以为是筛选坏了。
 （要覆盖老版本得再接一个 CurseForge 源，MCIM 镜像有 `/curseforge/v1/...`，但那是另一摊活。）
 
+**deb 依赖别手写，交给 SHLIBDEPS**：给内置浏览器声明运行时依赖时，
+我手写了个 `libqt6webengine6` —— **Debian 里根本没这个包**（它叫
+`libqt6webenginecore6` / `libqt6webenginequick6`），结果是用户
+`apt install` 直接卡在「无法满足的依赖关系」，报 `[no choices]`。
+
+而那行本来就是多余的：`CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON` 会顺着 ELF
+把 Qt 的库依赖全推出来，别的 Qt 库一直就是这么来的。**能自动推就别手写** ——
+手写的只会猜错，而且错在用户那边才炸。
+
+> 记一个查包名的习惯：`apt-cache policy <包名>`，候选为空就是没这个包。
+
 **微软登录改用内置浏览器**：`AccountManager` **不再自己开浏览器** —— 拿到设备码后只做两件事：
 把码放进剪贴板、发 `deviceCodeReady(userCode, uri)` 信号。**由界面决定用哪个浏览器**：
 
